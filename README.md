@@ -1,36 +1,305 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💰 Wealth Growth
 
-## Getting Started
+### AI-Powered Personal Financial Intelligence Platform
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![MongoDB](https://img.shields.io/badge/MongoDB-Green?logo=mongodb)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-In%20Development-orange)
+
+---
+
+## 📖 About
+
+**Wealth Growth** is a modern full-stack personal finance management platform that helps users manage every aspect of their finances from one centralized dashboard.
+
+Unlike traditional expense trackers, Wealth Growth provides **AI-powered financial intelligence**, helping users understand their financial health instead of simply recording transactions.
+
+The platform combines budgeting, net worth tracking, financial goals, investment portfolio management, analytics, and personalized AI recommendations into one seamless experience.
+
+---
+
+# ✨ Features
+
+## 🔐 User Authentication
+
+- User Registration
+- Secure Login
+- Profile Management
+- Protected Routes
+
+---
+
+## 🏠 Smart Financial Dashboard
+
+- 📊 Net Worth Overview
+- ❤️ Financial Health Score
+- 💰 Financial Summary
+- 📈 Recent Activities
+- 🔔 Smart Notifications
+- ⚡ Quick Financial Snapshot
+
+---
+
+## 💵 Budget Management
+
+- Record Income
+- Record Expenses
+- Category Management
+- Monthly Budget Planning
+- Budget Monitoring
+- Remaining Budget Calculation
+
+---
+
+## 💰 Net Worth Management
+
+- Assets Management
+- Liabilities Management
+- Automatic Net Worth Calculation
+- Financial Summary
+
+---
+
+## 🎯 Financial Goals
+
+- Create Financial Goals
+- Track Goal Progress
+- Contribution Management
+- Goal Completion Tracking
+
+---
+
+## 📈 Investment Portfolio
+
+Supported Investments
+
+- 📊 Stocks
+- 📈 Mutual Funds
+- 🪙 Gold
+- 🏦 Fixed Deposits (FD)
+
+Features
+
+- Portfolio Performance
+- Profit/Loss Tracking
+- Investment Summary
+
+---
+
+## 📊 Analytics & Reports
+
+- Expense Analysis
+- Savings Analysis
+- Net Worth Growth
+- Monthly Reports
+- Interactive Charts
+- PDF Report Generation
+
+---
+
+## 🔔 Smart Notifications
+
+- Budget Limit Alerts
+- Budget Exceeded Alerts
+- Bill Payment Reminders
+- Goal Progress Notifications
+- Financial Health Alerts
+- Monthly Budget Reminder
+- Monthly Report Reminder
+- Investment Maturity Reminder
+
+---
+
+## 🤖 AI Wealth Assistant
+
+Unlike a general chatbot, the AI assistant only understands **your financial data**.
+
+### Capabilities
+
+- Personalized Financial Insights
+- Budget Suggestions
+- Investment Suggestions
+- Financial Summary
+- Goal Recommendations
+- Context-Aware Question Answering
+
+---
+
+# 🛠 Tech Stack
+
+| Category | Technology |
+|-----------|------------|
+| Frontend | Next.js, TypeScript, Tailwind CSS |
+| Backend | Next.js API Routes, Node.js |
+| Database | MongoDB, MongoDB Atlas |
+| Authentication | NextAuth.js / JWT |
+| AI | OpenAI API |
+| Stock API | Alpha Vantage |
+| Mutual Fund API | MFAPI |
+| Charts | Recharts, Chart.js |
+| PDF | jsPDF |
+| Forms | React Hook Form |
+| Validation | Zod |
+| Database ORM | Mongoose |
+
+---
+
+# 📂 Project Structure
+
+```text
+wealth-growth/
+│
+├── public/
+├── src/
+│   ├── app/
+│   ├── components/
+│   ├── features/
+│   ├── hooks/
+│   ├── lib/
+│   ├── models/
+│   ├── services/
+│   ├── types/
+│   └── utils/
+│
+├── .env.local
+├── package.json
+└── README.md
+```
+
+---
+
+# 🚀 Future Enhancements
+
+- 📱 Progressive Web App (PWA)
+- 📧 Email Notifications
+- 🌙 Dark Mode
+- ☁ Cloud Backup
+- 📊 Advanced Portfolio Analytics
+- 🔄 Recurring Transactions
+- 💳 Bank Account Integration
+- 📈 Investment Performance Prediction
+
+---
+
+# 🎯 Project Goals
+
+- Improve financial awareness
+- Encourage disciplined budgeting
+- Track investments efficiently
+- Visualize financial growth
+- Provide AI-powered financial assistance
+- Simplify personal finance management
+
+---
+
+# 📷 Screenshots
+
+Project screenshots will be added after development.
+
+---
+
+# ⚙️ Installation
+
+## Clone the Repository
+
+```bash
+git clone https://github.com/KaranMagham/wealth-growth.git
+```
+
+## Navigate to the Project
+
+```bash
+cd wealth-growth
+```
+
+## Install Dependencies
+
+```bash
+npm install
+```
+
+## Configure Environment Variables
+
+Create a `.env.local` file and add the required API keys.
+
+```env
+MONGODB_URI=
+
+NEXTAUTH_SECRET=
+
+OPENAI_API_KEY=
+
+ALPHA_VANTAGE_API_KEY=
+```
+
+## Start the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open your browser and visit:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+# 📅 Development Status
 
-To learn more about Next.js, take a look at the following resources:
+| Module | Status |
+|---------|:------:|
+| Project Planning | ✅ |
+| UI/UX Design | ✅ |
+| Synopsis | ✅ |
+| Project Setup | 🟡 |
+| Authentication | ⏳ |
+| Dashboard | ⏳ |
+| Budget Management | ⏳ |
+| Net Worth Management | ⏳ |
+| Goal Management | ⏳ |
+| Investment Module | ⏳ |
+| Analytics | ⏳ |
+| Notifications | ⏳ |
+| AI Wealth Assistant | ⏳ |
+| Testing | ⏳ |
+| Deployment | ⏳ |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Legend:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- ✅ Completed
+- 🟡 In Progress
+- ⏳ Planned
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# 🤝 Contributing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is currently being developed as a **Final Year B.Sc. Computer Science Project**.
+
+Suggestions, ideas, and feedback are always welcome.
+
+---
+
+# 👨‍💻 Developer
+
+**Karan Santosh Magham**
+
+Final Year B.Sc. Computer Science Student
+
+---
+
+# 📄 License
+
+This project is licensed under the **MIT License**.
+
+---
+
+## ⭐ Support
+
+If you found this project interesting, please consider giving it a **Star ⭐** on GitHub.
+
+It helps support the project and motivates future development.
