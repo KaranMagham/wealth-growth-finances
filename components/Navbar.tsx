@@ -22,16 +22,24 @@ const Navbar = () => {
         </Link>
 
         <nav className="flex items-center gap-6 text-sm font-semibold text-[#E2E8F0]">
-          <Link href="/about" className="transition hover:text-[#10B981]">
+          <Link
+            href="/about"
+            className="group relative transition duration-300 ease-out hover:-translate-y-0.5 hover:text-[#10B981]"
+          >
+            <span className="absolute bottom-[-4px] left-0 h-0.5 w-0 rounded-full bg-[#10B981] transition-all duration-300 ease-out group-hover:w-full" />
             About
           </Link>
-          <Link href="/support" className="transition hover:text-[#10B981]">
-            Support
+          <Link
+            href="/support"
+            className="group relative transition duration-300 ease-out hover:-translate-y-0.5 hover:text-[#10B981]"
+          >
+            <span className="absolute bottom-[-4px] left-0 h-0.5 w-0 rounded-full bg-[#10B981] transition-all duration-300 ease-out group-hover:w-full" />
+            Help Center
           </Link>
           <span className="text-[#334155]">|</span>
           <Link
             href="/login"
-            className="rounded-full bg-[#10B981] px-5 py-2 text-white transition hover:bg-[#059669]"
+            className="rounded-full bg-[#10B981] px-5 py-2 text-white shadow-[0_0_0_rgba(16,185,129,0.15)] transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#059669] hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
           >
             Login
           </Link>
