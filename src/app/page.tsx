@@ -1,9 +1,38 @@
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import FAQ from "../../components/FAQ";
 import Image from "next/image";
 
 const trustItems = ["Secure", "AI Powered", "Investment Tracking", "Smart Reports"];
+
+const homeFaqs = [
+  {
+    question: "What is the Wealth Growth platform?",
+    answer:
+      "Wealth Growth is a modern finance hub for tracking spending, budgeting, investing, and staying on top of your financial goals.",
+  },
+  {
+    question: "Is my data secure?",
+    answer:
+      "Yes. We use secure authentication, encryption, and trusted privacy practices to keep your financial information safe.",
+  },
+  {
+    question: "Can I track my investments?",
+    answer:
+      "Absolutely — add investment accounts and watch performance, allocation, and progress in one place.",
+  },
+  {
+    question: "How is Wealth Growth different from other finance apps?",
+    answer:
+      "Wealth Growth brings expense tracking, budgeting, investments, financial goals, reports, and AI-powered insights together in one simple and modern platform.",
+  },
+  {
+    question: "Is Wealth Growth free to use?",
+    answer:
+      "Yes. Our core financial management features are free to use, with more advanced features planned for future updates.",
+  },
+];
 
 export default function Home() {
   return (
@@ -239,62 +268,12 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">
-              FAQ
-            </p>
-            <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">
-              Your questions answered
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              {
-                question: "What is the Wealth Growth platform?",
-                answer:
-                  "Wealth Growth is a modern finance hub for tracking spending, budgeting, investing, and staying on top of your financial goals.",
-              },
-              {
-                question: "Is my data secure?",
-                answer:
-                  "Yes. We use secure authentication, encryption, and trusted privacy practices to keep your financial information safe.",
-              },
-              {
-                question: "Can I track my investments?",
-                answer:
-                  "Absolutely — add investment accounts and watch performance, allocation, and progress in one place.",
-              },
-              {
-                question: "How is Wealth Growth different from other finance apps?",
-                answer:
-                  "Wealth Growth brings expense tracking, budgeting, investments, financial goals, reports, and AI-powered insights together in one simple and modern platform.",
-              },
-              {
-                question: "Is Wealth Growth free to use?",
-                answer:
-                  "Yes. Our core financial management features are free to use, with more advanced features planned for future updates.",
-              },
-            ].map((faq) => (
-              <details
-                key={faq.question}
-                className="group overflow-hidden rounded-[28px] border border-[#334155] bg-[#111827]/90 transition duration-300 hover:scale-[1.01]"
-              >
-                <summary className="flex cursor-pointer items-center justify-between gap-4 px-6 py-5 text-left text-base font-semibold text-white transition">
-                  {faq.question}
-                  <span className="text-xl text-[#10B981]">
-                    <span className="group-open:hidden">+</span>
-                    <span className="hidden group-open:inline"> − </span>
-                  </span>
-                </summary>
-                <div className="border-t border-[#1F2937] px-6 py-4 text-sm leading-6 text-[#94A3B8] transition duration-300">
-                  {faq.answer}
-                </div>
-              </details>
-            ))}
-          </div>
-        </section>
+        <FAQ
+          id="faq"
+          subtitle="FAQ"
+          title="Your questions answered"
+          faqs={homeFaqs}
+        />
 
         <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
           <div className="relative overflow-hidden rounded-[36px] border border-[#334155] bg-[#111827]/95 px-6 py-14 shadow-[0_0_140px_rgba(16,185,129,0.18)] sm:px-10">

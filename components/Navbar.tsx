@@ -30,7 +30,7 @@ const Navbar = () => {
             About
           </Link>
           <Link
-            href="/support"
+            href="/contact"
             className="group relative transition duration-300 ease-out hover:-translate-y-0.5 hover:text-[#10B981]"
           >
             <span className="absolute bottom-[-4px] left-0 h-0.5 w-0 rounded-full bg-[#10B981] transition-all duration-300 ease-out group-hover:w-full" />
@@ -41,7 +41,7 @@ const Navbar = () => {
             href="/login"
             className="rounded-full bg-[#10B981] px-5 py-2 text-white shadow-[0_0_0_rgba(16,185,129,0.15)] transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#059669] hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
           >
-            Login
+            Sign Up
           </Link>
         </nav>
       </div>

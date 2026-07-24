@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
+import FAQ from '../../../components/FAQ'
 import Image from 'next/image'
 
 const whyChooseItems = [
@@ -50,6 +51,25 @@ const roadmapItems = [
   'AI Wealth Assistant',
   'Notifications',
   'Mobile Application',
+]
+
+const aboutFaqs = [
+  {
+    question: 'What makes Wealth Growth different?',
+    answer: 'Wealth Growth combines budgeting, expense tracking, investment monitoring, and AI insights into one modern financial dashboard.',
+  },
+  {
+    question: 'Is Wealth Growth secure?',
+    answer: 'Yes. The platform is designed with strong authentication and security best practices to protect your financial data.',
+  },
+  {
+    question: 'Can I manage goals and budgets in one place?',
+    answer: 'Absolutely — Wealth Growth helps you set goals, monitor progress, and keep budgets aligned with your financial plans.',
+  },
+  {
+    question: 'Will Wealth Growth support mobile devices?',
+    answer: 'Yes. The platform is built with responsive design so it works smoothly across desktop, tablet, and mobile screens.',
+  },
 ]
 
 export default function AboutPage() {
@@ -120,6 +140,13 @@ export default function AboutPage() {
             </p>
           </div>
         </section>
+
+        <FAQ
+          id="faq"
+          subtitle="FAQ"
+          title="About Wealth Growth"
+          faqs={aboutFaqs}
+        />
 
         {/* <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
