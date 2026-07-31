@@ -1,6 +1,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 
+const handleLogout = async () => {
+  await fetch("/api/logout", { method: "POST" });
+  window.location.href = "/login";
+};
+
 const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 border-b border-[#334155] bg-[#0F172A]/90 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur">

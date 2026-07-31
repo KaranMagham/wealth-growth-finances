@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/mongodb";
-import User from "@/models/User";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { APIError, isAPIError } from "better-auth/api";
 
 export async function POST(req: NextRequest) {
   try {
-    await connectDB();
-
     const { fullname, email, password, image } = await req.json();
 
-    // Validation
     if (!fullname || !email || !password) {
       return NextResponse.json(
         { success: false, message: "All required fields must be provided" },
@@ -24,7 +21,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Email format validation (optional but recommended)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -33,44 +29,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return NextResponse.json(
-        { success: false, message: "User already exists" },
-        { status: 400 }
-      );
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user
-    const user = await User.create({
-      fullname,
-      email,
-      password: hashedPassword,
-      image: image || "",
-      provider: "credentials",
-      emailVerified: false,
+    const { headers: setHeaders } = await auth.api.signUpEmail({
+      returnHeaders: true,
+      body: {
+        email,
+        password,
+        name: fullname,
+      },
+      headers: Object.fromEntries((await headers()).entries()),
     });
 
-    // Return user data without password
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         success: true,
-        data: {
-          id: user._id,
-          fullname: user.fullname,
-          email: user.email,
-          image: user.image,
-          emailVerified: user.emailVerified,
-        },
+        message: "Account created successfully",
       },
       { status: 201 }
     );
+
+    const cookies = setHeaders.getSetCookie();
+    cookies.forEach((cookie) => {
+      res.headers.append("Set-Cookie", cookie);
+    });
+
+    return res;
   } catch (error) {
+    if (isAPIError(error)) {
+      const apiError = error as APIError;
+      return NextResponse.json(
+        { success: false, message: apiError.message },
+        { status: Number(apiError.status) || 400 }
+      );
+    }
+
     console.error("Registration error:", error);
     return NextResponse.json(
       { success: false, message: "Internal server error" },

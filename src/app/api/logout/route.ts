@@ -1,4 +1,4 @@
-// app/api/login/route.ts
+// app/api/logout/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -6,26 +6,13 @@ import { APIError, isAPIError } from "better-auth/api";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { success: false, message: "Email and password are required" },
-        { status: 400 }
-      );
-    }
-
-    const { headers: setHeaders } = await auth.api.signInEmail({
+    const { headers: setHeaders } = await auth.api.signOut({
       returnHeaders: true,
-      body: {
-        email,
-        password,
-      },
-      headers: await headers(),
+      headers: Object.fromEntries((await headers()).entries()),
     });
 
     const res = NextResponse.json(
-      { success: true, message: "Login successful" },
+      { success: true, message: "Logged out" },
       { status: 200 }
     );
 
@@ -44,7 +31,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.error("SignIn error:", error);
+    console.error("SignOut error:", error);
     return NextResponse.json(
       { success: false, message: "Internal server error" },
       { status: 500 }

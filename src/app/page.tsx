@@ -34,6 +34,11 @@ const homeFaqs = [
   },
 ];
 
+const handleLogout = async () => {
+  await fetch("/api/logout", { method: "POST" });
+  window.location.href = "/login";
+};
+
 export default function Home() {
   return (
     <>

@@ -87,34 +87,25 @@ export default function SignInPage() {
     try {
       const res = await fetch("/api/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
           password,
         }),
-      })
-
-      const data = await res.json()
+      });
+      const data = await res.json();
 
       if (!res.ok) {
-        setStatus("error")
-        setErrorMessage(data.message || "Invalid email or password")
-        return
+        setStatus("error");
+        setErrorMessage(data.message || "Invalid credentials");
+        return;
       }
 
-      setStatus("success")
+      setStatus("success");
 
-      // Optional: Store user data if remember me is checked
-      if (rememberMe) {
-        localStorage.setItem('user', JSON.stringify(data.data))
-      }
-
-      // Redirect after success
       setTimeout(() => {
-        router.push("/dashboard")
-      }, 1500)
+        router.push("/dashboard");
+      }, 1500);
     } catch (error) {
       setStatus("error")
       setErrorMessage("Something went wrong. Please try again.")
@@ -266,14 +257,14 @@ export default function SignInPage() {
                     type="submit"
                     disabled={!canSubmit}
                     className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition ${canSubmit
-                        ? 'bg-[#10B981] text-[#020617] hover:bg-[#34d399]'
-                        : 'cursor-not-allowed bg-[#334155] text-[#94A3B8]'
+                      ? 'bg-[#10B981] text-[#020617] hover:bg-[#34d399]'
+                      : 'cursor-not-allowed bg-[#334155] text-[#94A3B8]'
                       }`}
                   >
                     {status === 'loading' ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Signing In...  
+                        Signing In...
                       </>
                     ) : (
                       'Sign In'

@@ -106,6 +106,7 @@ export default function SignUpPage() {
   const passwordValid = Object.values(passwordChecks).every(Boolean)
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword
   const emailValid = isValidEmail(email)
+  const router = useRouter()
   const canSubmit =
     fullName.trim().length > 1 &&
     emailValid &&
@@ -122,53 +123,52 @@ export default function SignUpPage() {
   ] as const
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!acceptedTerms) {
-    setErrorMessage("Please accept the Terms & Conditions.");
-    setStatus("error");
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    setErrorMessage("Passwords do not match.");
-    setStatus("error");
-    return;
-  }
-
-  try {
-    setStatus("loading");
-
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        fullname: fullName,
-        email,
-        password,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
+    if (!acceptedTerms) {
+      setErrorMessage("Please accept the Terms & Conditions.");
       setStatus("error");
-      setErrorMessage(data.message);
       return;
     }
 
-    setStatus("success");
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      setStatus("error");
+      return;
+    }
 
-    setTimeout(() => {
-      window.location.href = "/login";
-    }, 1500);
-  } catch (error) {
-    setStatus("error");
-    setErrorMessage("Something went wrong. Please try again.");
-  }
-};
+    try {
+      setStatus("loading");
+
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullname: fullName,
+          email,
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus("error");
+        setErrorMessage(data.message || "Signup failed");
+        return;
+      }
+
+      // Better-Auth returns session in cookies automatically
+      setStatus("success");
+
+      setTimeout(() => {
+        router.push("/login"); // or /dashboard
+      }, 1500);
+    } catch (error) {
+      setStatus("error");
+      setErrorMessage("Something went wrong. Please try again.");
+    }
+  };
 
   return (
     <>
