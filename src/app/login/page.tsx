@@ -1,6 +1,7 @@
 "use client"
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Eye,
@@ -8,10 +9,10 @@ import {
   Lock,
   Sparkles,
   Wallet,
-  PiggyBank,
   LineChart,
   Bot,
   Zap,
+  LayoutDashboard,
   Loader2,
   CheckCircle2,
   AlertCircle,
@@ -23,23 +24,23 @@ import Footer from '../../../components/Footer'
 const benefits = [
   {
     icon: Wallet,
-    title: 'Track Every Expense',
-    description: 'Automatically organize your income and spending in one place.',
-  },
-  {
-    icon: PiggyBank,
-    title: 'Create Smart Budgets',
-    description: 'Plan monthly budgets and stay in control of your spending.',
+    title: 'Continue Tracking Expenses',
+    description: 'Pick up where you left off and keep your spending organized.',
   },
   {
     icon: LineChart,
-    title: 'Monitor Investments',
-    description: 'Follow stocks, mutual funds, and portfolio progress over time.',
+    title: 'Monitor Your Investments',
+    description: 'Check portfolio progress and stay aligned with your goals.',
   },
   {
     icon: Bot,
-    title: 'Receive AI Financial Insights',
-    description: 'Get personalized recommendations to grow wealth smarter.',
+    title: 'AI Insights Await',
+    description: 'Get personalized recommendations based on your latest activity.',
+  },
+  {
+    icon: LayoutDashboard,
+    title: 'Secure Access to Your Dashboard',
+    description: 'Sign in safely and manage your finances from one place.',
   },
 ]
 
@@ -60,65 +61,21 @@ const trustBadges = [
 
 type FormStatus = 'idle' | 'loading' | 'success' | 'error'
 
-function getPasswordChecks(password: string) {
-  return {
-    length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    number: /[0-9]/.test(password),
-    symbol: /[^A-Za-z0-9]/.test(password),
-  }
-}
-
-function getPasswordStrength(password: string) {
-  const checks = getPasswordChecks(password)
-  const score = Object.values(checks).filter(Boolean).length
-
-  if (!password || score <= 1) {
-    return { label: 'Weak', filled: 1, color: 'bg-rose-500' }
-  }
-  if (score === 2) {
-    return { label: 'Weak', filled: 2, color: 'bg-rose-500' }
-  }
-  if (score === 3) {
-    return { label: 'Medium', filled: 3, color: 'bg-amber-400' }
-  }
-  return { label: 'Strong', filled: 5, color: 'bg-[#10B981]' }
-}
-
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 }
 
-export default function SignUpPage() {
-  const [fullName, setFullName] = useState('')
+export default function SignInPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [status, setStatus] = useState<FormStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const passwordChecks = useMemo(() => getPasswordChecks(password), [password])
-  const strength = useMemo(() => getPasswordStrength(password), [password])
-  const passwordValid = Object.values(passwordChecks).every(Boolean)
-  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword
   const emailValid = isValidEmail(email)
-  const canSubmit =
-    fullName.trim().length > 1 &&
-    emailValid &&
-    passwordValid &&
-    passwordsMatch &&
-    acceptedTerms &&
-    status !== 'loading'
-
-  const requirementItems = [
-    { key: 'length', label: '8 characters', met: passwordChecks.length },
-    { key: 'uppercase', label: 'Uppercase', met: passwordChecks.uppercase },
-    { key: 'number', label: 'Number', met: passwordChecks.number },
-    { key: 'symbol', label: 'Symbol', met: passwordChecks.symbol },
-  ] as const
+  const router = useRouter()
+  const canSubmit = emailValid && password.length >= 4 && status !== 'loading'
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -127,11 +84,41 @@ export default function SignUpPage() {
     setStatus('loading')
     setErrorMessage('')
 
-    // Placeholder for backend signup flow:
-    // Signup → Email Verification → Verified → Automatic Login → Complete Profile → Dashboard
-    await new Promise((resolve) => setTimeout(resolve, 900))
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      })
 
-    setStatus('success')
+      const data = await res.json()
+
+      if (!res.ok) {
+        setStatus("error")
+        setErrorMessage(data.message || "Invalid email or password")
+        return
+      }
+
+      setStatus("success")
+
+      // Optional: Store user data if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem('user', JSON.stringify(data.data))
+      }
+
+      // Redirect after success
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 1500)
+    } catch (error) {
+      setStatus("error")
+      setErrorMessage("Something went wrong. Please try again.")
+    }
   }
 
   return (
@@ -147,16 +134,16 @@ export default function SignUpPage() {
             <div className="space-y-8 lg:pt-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-2 text-sm font-semibold text-[#D4F2D3] shadow-[0_0_20px_rgba(16,185,129,0.08)]">
                 <Sparkles className="h-4 w-4 text-[#10B981]" />
-                Start Your Financial Journey
+                Continue Your Financial Journey
               </div>
 
               <div className="space-y-5">
                 <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-white sm:text-5xl">
-                  Create Your
-                  <span className="block text-[#10B981]">Wealth Growth Account</span>
+                  Welcome Back to
+                  <span className="block text-[#10B981]">Wealth Growth</span>
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-[#CBD5E1] sm:text-lg">
-                  Join thousands of users managing their finances smarter with one intelligent platform. Track expenses, manage budgets, monitor investments, and achieve your financial goals—all in one place.
+                  Welcome back! Sign in to continue tracking your finances, monitor investments, and stay on top of your financial goals.
                 </p>
               </div>
 
@@ -198,18 +185,18 @@ export default function SignUpPage() {
 
             <div className="relative">
               <div className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-8 shadow-[0_0_50px_rgba(16,185,129,0.12)] sm:p-10">
-                <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Create Account</p>
-                <h2 className="mt-3 text-3xl font-semibold text-white">Create your Wealth Growth account</h2>
+                <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Sign In</p>
+                <h2 className="mt-3 text-3xl font-semibold text-white">Sign in to Wealth Growth</h2>
                 <p className="mt-4 text-sm leading-6 text-[#94A3B8]">
-                  Start managing your finances securely in less than a minute.
+                  Access your dashboard and continue managing your finances securely.
                 </p>
 
                 {status === 'success' && (
                   <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-3 text-sm text-[#D1FAE5]">
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#10B981]" />
                     <div>
-                      <p className="font-semibold text-white">Account Created</p>
-                      <p className="mt-1 text-[#A7F3D0]">Next: verify your email, then complete your profile.</p>
+                      <p className="font-semibold text-white">Signed In</p>
+                      <p className="mt-1 text-[#A7F3D0]">Redirecting to your dashboard next.</p>
                     </div>
                   </div>
                 )}
@@ -218,24 +205,13 @@ export default function SignUpPage() {
                   <div className="mt-6 flex items-start gap-3 rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
                     <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-300" />
                     <div>
-                      <p className="font-semibold text-white">Unable to create account</p>
-                      <p className="mt-1">{errorMessage || 'Email already exists or network error.'}</p>
+                      <p className="font-semibold text-white">Unable to sign in</p>
+                      <p className="mt-1">{errorMessage || 'Invalid email or password.'}</p>
                     </div>
                   </div>
                 )}
 
                 <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[#E2E8F0]">Full Name</label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(event) => setFullName(event.target.value)}
-                      placeholder="Karan Magham"
-                      className="w-full rounded-3xl border border-[#334155] bg-[#111827] px-4 py-3 text-sm text-white outline-none transition focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20"
-                    />
-                  </div>
-
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-[#E2E8F0]">Email Address</label>
                     <input
@@ -257,7 +233,7 @@ export default function SignUpPage() {
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
-                        placeholder="Create a password"
+                        placeholder="Enter your password"
                         className="w-full rounded-3xl border border-[#334155] bg-[#111827] px-4 py-3 pr-12 text-sm text-white outline-none transition focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20"
                       />
                       <button
@@ -269,111 +245,38 @@ export default function SignUpPage() {
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-
-                    <div className="pt-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-[#94A3B8]">Password strength</span>
-                        <span
-                          className={
-                            strength.label === 'Strong'
-                              ? 'text-[#10B981]'
-                              : strength.label === 'Medium'
-                                ? 'text-amber-300'
-                                : 'text-rose-300'
-                          }
-                        >
-                          {password ? strength.label : '—'}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex gap-1.5">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <span
-                            key={index}
-                            className={`h-1.5 flex-1 rounded-full ${
-                              password && index < strength.filled ? strength.color : 'bg-[#334155]'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <ul className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                      {requirementItems.map((item) => (
-                        <li
-                          key={item.key}
-                          className={`flex items-center gap-2 transition ${
-                            item.met ? 'text-[#10B981]' : 'text-[#64748B]'
-                          }`}
-                        >
-                          <span>✓</span>
-                          {item.label}
-                        </li>
-                      ))}
-                    </ul>
                   </div>
 
-                  <div className="space-y-2 pt-2">
-                    <label className="block text-sm font-medium text-[#E2E8F0]">Confirm Password</label>
-                    <div className="relative">
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <label className="flex items-center gap-3 text-[#CBD5E1]">
                       <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        value={confirmPassword}
-                        onChange={(event) => setConfirmPassword(event.target.value)}
-                        placeholder="Confirm your password"
-                        className="w-full rounded-3xl border border-[#334155] bg-[#111827] px-4 py-3 pr-12 text-sm text-white outline-none transition focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20"
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(event) => setRememberMe(event.target.checked)}
+                        className="h-4 w-4 rounded border-[#334155] bg-[#111827] text-[#10B981] focus:ring-[#10B981]"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94A3B8] transition hover:text-white"
-                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                      >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {confirmPassword.length > 0 && (
-                      <p className={`text-xs ${passwordsMatch ? 'text-[#10B981]' : 'text-rose-300'}`}>
-                        {passwordsMatch ? '✓ Passwords Match' : 'Passwords do not match'}
-                      </p>
-                    )}
+                      Remember Me
+                    </label>
+                    <Link href="/forgot_password" className="font-semibold text-[#10B981] hover:text-[#34d399]">
+                      Forgot Password?
+                    </Link>
                   </div>
-
-                  <label className="flex items-start gap-3 text-sm text-[#CBD5E1]">
-                    <input
-                      type="checkbox"
-                      checked={acceptedTerms}
-                      onChange={(event) => setAcceptedTerms(event.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-[#334155] bg-[#111827] text-[#10B981] focus:ring-[#10B981]"
-                    />
-                    <span>
-                      I agree to the{' '}
-                      <Link href="/terms" className="text-[#10B981] hover:text-[#34d399]">
-                        Terms & Conditions
-                      </Link>{' '}
-                      and{' '}
-                      <Link href="/privacy" className="text-[#10B981] hover:text-[#34d399]">
-                        Privacy Policy
-                      </Link>
-                      .
-                    </span>
-                  </label>
 
                   <button
                     type="submit"
                     disabled={!canSubmit}
-                    className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition ${
-                      canSubmit
+                    className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition ${canSubmit
                         ? 'bg-[#10B981] text-[#020617] hover:bg-[#34d399]'
                         : 'cursor-not-allowed bg-[#334155] text-[#94A3B8]'
-                    }`}
+                      }`}
                   >
                     {status === 'loading' ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Creating Account...
+                        Signing In...  
                       </>
                     ) : (
-                      'Create Account'
+                      'Sign In'
                     )}
                   </button>
 
@@ -386,6 +289,7 @@ export default function SignUpPage() {
                   <div className="space-y-3">
                     <button
                       type="button"
+                      disabled
                       className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <SiGoogle className="h-4 w-4" />
@@ -393,6 +297,7 @@ export default function SignUpPage() {
                     </button>
                     <button
                       type="button"
+                      disabled
                       className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <SiGithub className="h-4 w-4" />
@@ -401,9 +306,9 @@ export default function SignUpPage() {
                   </div>
 
                   <p className="text-center text-sm text-[#94A3B8]">
-                    Already have an account?{' '}
-                    <Link href="/signin" className="font-semibold text-[#10B981] hover:text-[#34d399]">
-                      Sign In
+                    Don&apos;t have an account?{' '}
+                    <Link href="/signup" className="font-semibold text-[#10B981] hover:text-[#34d399]">
+                      Create Account
                     </Link>
                   </p>
                 </form>
