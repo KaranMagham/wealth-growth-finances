@@ -15,9 +15,24 @@ export const auth = betterAuth({
   database: mongodbAdapter(await dbPromise), // Node 22: top-level await OK
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      console.info(`[auth] Password reset requested for ${user.email}`);
+      console.info(`[auth] Reset link: ${url}`);
+    },
   },
   twoFactor: {
     enabled: true,
   },
-  // providers: [...] for Google/GitHub later
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      enabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID || "",
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
+      enabled: Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET),
+    },
+  },
 });

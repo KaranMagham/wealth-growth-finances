@@ -1,12 +1,26 @@
+"use client"
+
 import Link from 'next/link'
 import Image from 'next/image'
-
-const handleLogout = async () => {
-  await fetch("/api/logout", { method: "POST" });
-  window.location.href = "/login";
-};
+import { useRouter } from 'next/navigation'
+import { useSession } from '@/hooks/useSession'
 
 const Navbar = () => {
+  const { status, session } = useSession()
+  const router = useRouter()
+
+  const user = session?.user
+  const isAuthenticated = status === 'authenticated' && !!user
+  const isLoading = status === 'loading'
+
+  const handleLogout = async () => {
+    try {
+      const res = await fetch('/api/logout', { method: 'POST', credentials: 'include' })
+    } finally {
+      router.push('/login')
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-[#334155] bg-[#0F172A]/90 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-8">
@@ -42,12 +56,33 @@ const Navbar = () => {
             Help Center
           </Link>
           <span className="text-[#334155]">|</span>
-          <Link
-            href="/login"
-            className="rounded-full bg-[#10B981] px-5 py-2 text-white shadow-[0_0_0_rgba(16,185,129,0.15)] transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#059669] hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
-          >
-            Sign Up
-          </Link>
+          {isLoading ? null : isAuthenticated ? (
+            <>
+              <span className="hidden rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-2 text-sm text-[#D4F2D3] sm:inline-flex">
+                {user?.name || user?.email}
+              </span>
+              <Link
+                href="/dashboard"
+                className="rounded-full border border-[#10B981]/40 px-4 py-2 text-[#D4F2D3] transition hover:border-[#10B981] hover:text-white"
+              >
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-full bg-[#10B981] px-5 py-2 text-white shadow-[0_0_0_rgba(16,185,129,0.15)] transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#059669] hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/signup"
+              className="rounded-full bg-[#10B981] px-5 py-2 text-white shadow-[0_0_0_rgba(16,185,129,0.15)] transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-[#059669] hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+            >
+              Sign Up
+            </Link>
+          )}
         </nav>
       </div>
     </header>

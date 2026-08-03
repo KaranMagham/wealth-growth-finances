@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Eye,
@@ -107,6 +107,33 @@ export default function SignUpPage() {
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword
   const emailValid = isValidEmail(email)
   const router = useRouter()
+
+  useEffect(() => {
+    const redirectIfAuthenticated = async () => {
+      try {
+        const res = await fetch('/api/auth/get-session', {
+          method: 'GET',
+          credentials: 'include',
+        })
+
+        if (!res.ok) {
+          return
+        }
+
+        const data = await res.json().catch(() => null)
+        const sessionUser = data?.user ?? data?.session?.user
+
+        if (sessionUser?.email) {
+          router.replace('/dashboard')
+        }
+      } catch {
+        // Ignore and allow the page to render.
+      }
+    }
+
+    redirectIfAuthenticated()
+  }, [router])
+
   const canSubmit =
     fullName.trim().length > 1 &&
     emailValid &&
@@ -121,6 +148,38 @@ export default function SignUpPage() {
     { key: 'number', label: 'Number', met: passwordChecks.number },
     { key: 'symbol', label: 'Symbol', met: passwordChecks.symbol },
   ] as const
+
+  const handleSocialSignIn = async (provider: "google" | "github") => {
+    try {
+      setStatus("loading")
+      setErrorMessage("")
+
+      const response = await fetch(`/api/auth/${provider}`, {
+        method: "POST",
+        credentials: "include",
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        setStatus("error")
+        setErrorMessage(data.message || `Unable to start ${provider} sign in right now.`)
+        return
+      }
+
+      if (data?.url) {
+        window.location.assign(data.url)
+        return
+      }
+
+      setStatus("success")
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 1000)
+    } catch {
+      setStatus("error")
+      setErrorMessage("Unable to start social sign in right now.")
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -419,14 +478,16 @@ export default function SignUpPage() {
                   <div className="space-y-3">
                     <button
                       type="button"
-                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => handleSocialSignIn("google")}
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition hover:border-[#10B981]/40 hover:text-white"
                     >
                       <SiGoogle className="h-4 w-4" />
                       Continue with Google
                     </button>
                     <button
                       type="button"
-                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => handleSocialSignIn("github")}
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition hover:border-[#10B981]/40 hover:text-white"
                     >
                       <SiGithub className="h-4 w-4" />
                       Continue with GitHub

@@ -1,6 +1,6 @@
 "use client"
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -77,6 +77,57 @@ export default function SignInPage() {
   const router = useRouter()
   const canSubmit = emailValid && password.length >= 4 && status !== 'loading'
 
+  useEffect(() => {
+    const redirectIfAuthenticated = async () => {
+      try {
+        const res = await fetch('/api/auth/get-session', {
+          method: 'GET',
+          credentials: 'include',
+        })
+
+        if (res.ok) {
+          router.replace('/dashboard')
+        }
+      } catch {
+        // Ignore and allow the page to render.
+      }
+    }
+
+    redirectIfAuthenticated()
+  }, [router])
+
+  async function handleSocialSignIn(provider: "google" | "github") {
+    try {
+      setStatus('loading')
+      setErrorMessage('')
+
+      const response = await fetch(`/api/auth/${provider}`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        setStatus('error')
+        setErrorMessage(data.message || `Unable to start ${provider} sign in right now.`)
+        return
+      }
+
+      if (data?.url) {
+        window.location.assign(data.url)
+        return
+      }
+
+      setStatus('success')
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1000)
+    } catch {
+      setStatus('error')
+      setErrorMessage('Unable to start social sign in right now.')
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canSubmit) return
@@ -106,7 +157,7 @@ export default function SignInPage() {
       setTimeout(() => {
         router.push("/dashboard");
       }, 1500);
-    } catch (error) {
+    } catch {
       setStatus("error")
       setErrorMessage("Something went wrong. Please try again.")
     }
@@ -248,7 +299,7 @@ export default function SignInPage() {
                       />
                       Remember Me
                     </label>
-                    <Link href="/forgot_password" className="font-semibold text-[#10B981] hover:text-[#34d399]">
+                    <Link href="/forgot-password" className="font-semibold text-[#10B981] hover:text-[#34d399]">
                       Forgot Password?
                     </Link>
                   </div>
@@ -280,16 +331,16 @@ export default function SignInPage() {
                   <div className="space-y-3">
                     <button
                       type="button"
-                      disabled
-                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => handleSocialSignIn("google")}
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition hover:border-[#10B981]/40 hover:text-white"
                     >
                       <SiGoogle className="h-4 w-4" />
                       Continue with Google
                     </button>
                     <button
                       type="button"
-                      disabled
-                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => handleSocialSignIn("github")}
+                      className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-[#334155] bg-[#111827] px-4 py-3 text-sm font-semibold text-[#94A3B8] transition hover:border-[#10B981]/40 hover:text-white"
                     >
                       <SiGithub className="h-4 w-4" />
                       Continue with GitHub
