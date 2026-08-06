@@ -111,19 +111,14 @@ export default function SignUpPage() {
   useEffect(() => {
     const redirectIfAuthenticated = async () => {
       try {
-        const res = await fetch('/api/auth/get-session', {
+        const res = await fetch('/api/session', {
           method: 'GET',
           credentials: 'include',
         })
 
-        if (!res.ok) {
-          return
-        }
-
         const data = await res.json().catch(() => null)
-        const sessionUser = data?.user ?? data?.session?.user
 
-        if (sessionUser?.email) {
+        if (res.ok && data?.success && data?.session) {
           router.replace('/dashboard')
         }
       } catch {

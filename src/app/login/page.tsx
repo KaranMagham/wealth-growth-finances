@@ -80,12 +80,14 @@ export default function SignInPage() {
   useEffect(() => {
     const redirectIfAuthenticated = async () => {
       try {
-        const res = await fetch('/api/auth/get-session', {
+        const res = await fetch('/api/session', {
           method: 'GET',
           credentials: 'include',
         })
 
-        if (res.ok) {
+        const data = await res.json().catch(() => null)
+
+        if (res.ok && data?.success && data?.session) {
           router.replace('/dashboard')
         }
       } catch {
