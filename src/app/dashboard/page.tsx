@@ -62,11 +62,11 @@ export default function DashboardPage() {
     <>
       <Navbar />
 
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),linear-gradient(135deg,#020617_0%,#0F172A_60%,#111827_100%)] text-white">
+      <main className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),linear-gradient(135deg,#020617_0%,#0F172A_60%,#111827_100%)] text-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-            <section className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-8 shadow-[0_0_50px_rgba(16,185,129,0.12)]">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <section className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_50px_rgba(16,185,129,0.12)] sm:p-8">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/40 bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#D4F2D3]">
                     <Sparkles className="h-4 w-4 text-[#10B981]" />
@@ -77,9 +77,9 @@ export default function DashboardPage() {
                     Your financial health is in a strong position. Keep building momentum with steady habits and smart savings.
                   </p>
                 </div>
-                <div className="rounded-3xl border border-[#10B981]/30 bg-[#10B981]/10 px-5 py-4 text-right">
+                <div className="w-full rounded-3xl border border-[#10B981]/30 bg-[#10B981]/10 px-5 py-4 text-left sm:w-auto sm:text-right">
                   <p className="text-sm text-[#D4F2D3]">Financial Health</p>
-                  <div className="mt-1 flex items-end justify-end gap-2">
+                  <div className="mt-1 flex items-end justify-start gap-2 sm:justify-end">
                     <span className="text-4xl font-semibold text-white">84</span>
                     <span className="pb-1 text-sm text-[#10B981]">/ 100</span>
                   </div>
@@ -90,11 +90,11 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-8 rounded-[28px] border border-[#1F2937] bg-[#111827]/80 p-6">
+              <div className="mt-8 rounded-[28px] border border-[#1F2937] bg-[#111827]/80 p-5 sm:p-6">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <p className="text-sm uppercase tracking-[0.3em] text-[#94A3B8]">Net Worth</p>
-                    <p className="mt-2 text-4xl font-semibold text-white">₹12,35,000</p>
+                    <p className="mt-2 text-3xl font-semibold text-white sm:text-4xl">₹12,35,000</p>
                   </div>
                   <div className="rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#10B981]">
                     +8.2% this month
@@ -103,7 +103,7 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            <aside className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-6 shadow-[0_0_40px_rgba(16,185,129,0.08)]">
+            <aside className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)] sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl border border-[#10B981]/30 bg-[#10B981]/10 p-3 text-[#10B981]">
                   <TrendingUp className="h-5 w-5" />
@@ -135,7 +135,7 @@ export default function DashboardPage() {
             </aside>
           </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
             {kpis.map((item) => (
               <div key={item.label} className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_25px_rgba(16,185,129,0.08)]">
                 <p className="text-sm text-[#94A3B8]">{item.label}</p>
@@ -151,7 +151,7 @@ export default function DashboardPage() {
                 <CreditCard className="h-4 w-4 text-[#10B981]" />
                 Monthly Flow
               </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="mt-5 grid gap-3 grid-cols-1 sm:grid-cols-2">
                 {summaryRows.map((item) => (
                   <div key={item.label} className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
                     <p className="text-sm text-[#94A3B8]">{item.label}</p>
@@ -198,7 +198,7 @@ export default function DashboardPage() {
 
             <div className="mt-5 space-y-3">
               {transactions.map((item) => (
-                <div key={item.title} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#1F2937] bg-[#111827]/70 px-4 py-4">
+                <div key={item.title} className="flex flex-col gap-3 rounded-2xl border border-[#1F2937] bg-[#111827]/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-semibold text-white">{item.title}</p>
                     <p className="mt-1 text-sm text-[#94A3B8]">{item.meta}</p>

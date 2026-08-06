@@ -64,7 +64,7 @@ export default function ContactPage() {
 
         <section className="relative mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[32px] border border-[#334155] bg-[#0F172A]/80 p-8 shadow-[0_0_80px_rgba(16,185,129,0.12)]">
+            <div className="w-full rounded-[32px] border border-[#334155] bg-[#0F172A]/80 p-6 shadow-[0_0_80px_rgba(16,185,129,0.12)] sm:p-8">
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Contact Us</p>
               <h2 className="mt-4 text-3xl font-semibold text-white">Connect With Us Directly</h2>
               <p className="mt-4 text-base leading-8 text-[#CBD5E1]">
@@ -83,7 +83,7 @@ export default function ContactPage() {
                 </div>
                 <input name="subject" className="w-full rounded-2xl border border-[#334155] bg-[#111827] px-4 py-3 text-sm text-[#F8FAFC] outline-none ring-0 placeholder:text-[#64748B]" placeholder="Subject" />
                 <textarea name="message" rows={5} className="w-full rounded-2xl border border-[#334155] bg-[#111827] px-4 py-3 text-sm text-[#F8FAFC] outline-none ring-0 placeholder:text-[#64748B]" placeholder="Message" />
-                <button type="submit" className="rounded-full bg-[#10B981] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#059669]">
+                <button type="submit" className="w-full rounded-full bg-[#10B981] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#059669] sm:w-auto">
                   Send Message
                 </button>
               </form>

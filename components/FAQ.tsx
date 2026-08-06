@@ -33,7 +33,7 @@ const FAQ = ({ id, title, subtitle, faqs }: FAQProps) => {
             key={faq.question}
             className="group overflow-hidden rounded-[28px] border border-[#334155] bg-[#111827]/90 transition hover:border-[#10B981]"
           >
-            <summary className="flex cursor-pointer items-center justify-between px-6 py-5 text-lg font-semibold text-white">
+            <summary className="flex cursor-pointer items-center justify-between gap-4 px-6 py-5 text-base font-semibold text-white sm:text-lg">
               {faq.question}
 
               <span className="text-[#10B981] transition group-open:rotate-45">

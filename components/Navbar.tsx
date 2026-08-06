@@ -3,11 +3,14 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { Menu, X } from 'lucide-react'
 import { useSession } from '@/hooks/useSession'
 
 const Navbar = () => {
   const { status, session } = useSession()
   const router = useRouter()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const user = session?.user
   const isAuthenticated = status === 'authenticated' && !!user
@@ -15,16 +18,26 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch('/api/logout', { method: 'POST', credentials: 'include' })
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' })
     } finally {
+      setIsMenuOpen(false)
       router.push('/login')
     }
   }
 
+  const mobileLinks = [
+    { href: '/', label: 'Home' },
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard', label: 'Transactions' },
+    { href: '/features', label: 'Assets' },
+    { href: '/about', label: 'Goals' },
+    { href: '/contact', label: 'Help Center' },
+  ]
+
   return (
     <header className="sticky top-0 z-50 border-b border-[#334155] bg-[#0F172A]/90 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-8">
-        <Link href="/" className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
+        <Link href="/" className="flex items-center gap-3" onClick={() => setIsMenuOpen(false)}>
           <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#D4AF37] bg-[#1E293B] p-1 shadow-lg shadow-[#10B981]/20">
             <Image
               src="/logomain.png"
@@ -40,7 +53,17 @@ const Navbar = () => {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-6 text-sm font-semibold text-[#E2E8F0]">
+        <button
+          type="button"
+          aria-label="Toggle navigation"
+          aria-expanded={isMenuOpen}
+          onClick={() => setIsMenuOpen((open) => !open)}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#10B981]/30 bg-[#111827]/80 text-[#D4F2D3] lg:hidden"
+        >
+          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+
+        <nav className="hidden items-center gap-6 text-sm font-semibold text-[#E2E8F0] lg:flex">
           <Link
             href="/about"
             className="group relative transition duration-300 ease-out hover:-translate-y-0.5 hover:text-[#10B981]"
@@ -85,6 +108,46 @@ const Navbar = () => {
           )}
         </nav>
       </div>
+
+      {isMenuOpen && (
+        <div className="border-t border-[#334155] bg-[#0F172A]/95 lg:hidden">
+          <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
+            {mobileLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                onClick={() => setIsMenuOpen(false)}
+                className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 px-4 py-3 text-sm font-semibold text-[#E2E8F0]"
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            {isLoading ? null : isAuthenticated ? (
+              <>
+                <div className="rounded-2xl border border-[#10B981]/20 bg-[#10B981]/10 px-4 py-3 text-sm text-[#D4F2D3]">
+                  {user?.name || user?.email}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full rounded-full bg-[#10B981] px-4 py-3 text-sm font-semibold text-white"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/signup"
+                onClick={() => setIsMenuOpen(false)}
+                className="w-full rounded-full bg-[#10B981] px-4 py-3 text-center text-sm font-semibold text-white"
+              >
+                Sign Up
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   )
 }

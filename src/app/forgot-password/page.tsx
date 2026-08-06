@@ -56,8 +56,8 @@ export default function ForgotPasswordPage() {
       <Navbar />
 
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),linear-gradient(135deg,#020617_0%,#0F172A_60%,#111827_100%)] text-white">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-center px-4 py-20 sm:px-6 lg:px-8">
-          <div className="w-full max-w-2xl rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-8 shadow-[0_0_50px_rgba(16,185,129,0.12)] sm:p-10">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
+          <div className="w-full max-w-md rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-6 shadow-[0_0_50px_rgba(16,185,129,0.12)] sm:p-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-2 text-sm font-semibold text-[#D4F2D3]">
               <Sparkles className="h-4 w-4 text-[#10B981]" />
               Password Recovery

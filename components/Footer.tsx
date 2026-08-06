@@ -6,7 +6,7 @@ import Image from 'next/image'
 const Footer = () => {
   return (
     <footer className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="rounded-[32px] border border-[#334155] bg-[#0B1220]/95 p-10 shadow-[0_0_80px_rgba(16,185,129,0.14)]">
+      <div className="rounded-[32px] border border-[#334155] bg-[#0B1220]/95 p-6 shadow-[0_0_80px_rgba(16,185,129,0.14)] sm:p-10">
         <div className="grid gap-10 lg:grid-cols-[2.5fr_1fr_1fr_1fr]">
           <div className="space-y-6">
             <div className="flex items-center gap-3">

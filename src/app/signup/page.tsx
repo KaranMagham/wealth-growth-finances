@@ -237,7 +237,7 @@ export default function SignUpPage() {
         <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:36px_36px]" />
         <div className="pointer-events-none absolute left-1/2 top-0 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-[#10B981]/20 blur-[140px]" />
 
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
             <div className="space-y-8 lg:pt-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-2 text-sm font-semibold text-[#D4F2D3] shadow-[0_0_20px_rgba(16,185,129,0.08)]">
@@ -292,7 +292,7 @@ export default function SignUpPage() {
             </div>
 
             <div className="relative">
-              <div className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-8 shadow-[0_0_50px_rgba(16,185,129,0.12)] sm:p-10">
+              <div className="mx-auto w-full max-w-md rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-6 shadow-[0_0_50px_rgba(16,185,129,0.12)] sm:p-8">
                 <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Create Account</p>
                 <h2 className="mt-3 text-3xl font-semibold text-white">Create your Wealth Growth account</h2>
                 <p className="mt-4 text-sm leading-6 text-[#94A3B8]">

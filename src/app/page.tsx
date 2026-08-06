@@ -49,7 +49,7 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:36px_36px]" />
         <div className="pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full bg-[#10B981]/20 blur-[120px]" />
 
-        <section className="relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 py-14 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-20">
+        <section className="relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 py-12 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-20">
           <div className="max-w-2xl text-center lg:text-left">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-[#1E293B]/80 px-3 py-2 text-sm font-medium text-[#F8FAFC] shadow-lg shadow-[#10B981]/10">
               <span className="text-[#D4AF37]">✨</span>
@@ -69,13 +69,13 @@ export default function Home() {
             <div className="mt-8 flex flex-wrap justify-center gap-4 lg:justify-start">
               <Link
                 href="/login"
-                className="rounded-full bg-[#10B981] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#059669]"
+                className="w-full rounded-full bg-[#10B981] px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#059669] sm:w-auto"
               >
                 Get Started
               </Link>
               <Link
                 href="/about"
-                className="rounded-full border border-[#10B981]/60 bg-[#0F172A]/70 px-6 py-3 text-sm font-semibold text-[#E2E8F0] transition hover:border-[#10B981] hover:bg-[#0F172A] hover:text-[#10B981]"
+                className="w-full rounded-full border border-[#10B981]/60 bg-[#0F172A]/70 px-6 py-3 text-center text-sm font-semibold text-[#E2E8F0] transition hover:border-[#10B981] hover:bg-[#0F172A] hover:text-[#10B981] sm:w-auto"
               >
                 Learn More
               </Link>
@@ -116,7 +116,7 @@ export default function Home() {
               width={380}
               height={380}
               priority
-              className="h-full w-full rounded-full object-cover"
+              className="mx-auto h-full w-full max-w-[320px] rounded-full object-cover sm:max-w-[380px]"
             />
           </div>
         </section>
