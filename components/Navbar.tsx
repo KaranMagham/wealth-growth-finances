@@ -25,14 +25,20 @@ const Navbar = () => {
     }
   }
 
-  const mobileLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/dashboard', label: 'Transactions' },
-    { href: '/features', label: 'Assets' },
-    { href: '/about', label: 'Goals' },
-    { href: '/contact', label: 'Help Center' },
-  ]
+  const mobileLinks = isAuthenticated
+    ? [
+        { href: '/', label: 'Home' },
+        { href: '/dashboard', label: 'Dashboard' },
+        { href: '/dashboard', label: 'Transactions' },
+        { href: '/features', label: 'Assets' },
+        { href: '/about', label: 'Goals' },
+        { href: '/contact', label: 'Help Center' },
+      ]
+    : [
+        { href: '/', label: 'Home' },
+        { href: '/about', label: 'About' },
+        { href: '/contact', label: 'Help Center' },
+      ]
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#334155] bg-[#0F172A]/90 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur">

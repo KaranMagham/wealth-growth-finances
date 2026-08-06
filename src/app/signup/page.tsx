@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Eye,
@@ -223,7 +223,7 @@ export default function SignUpPage() {
       setTimeout(() => {
         router.push("/login"); // or /dashboard
       }, 1500);
-    } catch (error) {
+    } catch {
       setStatus("error");
       setErrorMessage("Something went wrong. Please try again.");
     }
