@@ -2,6 +2,7 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { MongoClient } from "mongodb";
+import { sendPasswordResetEmail } from "@/lib/email";
 
 const uri = process.env.MONGODB_URI!;
 if (!uri) {
@@ -16,8 +17,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
-      console.info(`[auth] Password reset requested for ${user.email}`);
-      console.info(`[auth] Reset link: ${url}`);
+      await sendPasswordResetEmail({ user, url });
     },
   },
   twoFactor: {
