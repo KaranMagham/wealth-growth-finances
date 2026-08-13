@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowRight, BadgeCheck, Briefcase, CreditCard, Landmark, Sparkles, Target, TrendingUp } from "lucide-react"
 import Navbar from "../../../components/Navbar"
-import Footer from "../../../components/Footer"
+import AppFooter from "../../components/AppFooter";
 import { useSession } from "@/hooks/useSession"
 
 interface TransactionRecord {
@@ -397,7 +397,7 @@ export default function DashboardPage() {
           </section>
         </div>
 
-        <Footer />
+        <AppFooter />
       </main>
     </>
   )
