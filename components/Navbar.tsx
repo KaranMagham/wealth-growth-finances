@@ -2,16 +2,19 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { useSession } from '@/hooks/useSession'
+import { Plus } from "lucide-react";
 
 const Navbar = () => {
   const { status, session } = useSession()
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const pathname = usePathname();
 
+  const showAddTransaction = pathname !== "/transactions";
   const user = session?.user
   const isAuthenticated = status === 'authenticated' && !!user
   const isLoading = status === 'loading'
@@ -27,18 +30,18 @@ const Navbar = () => {
 
   const mobileLinks = isAuthenticated
     ? [
-        { href: '/', label: 'Home' },
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/dashboard', label: 'Transactions' },
-        { href: '/features', label: 'Assets' },
-        { href: '/about', label: 'Goals' },
-        { href: '/contact', label: 'Help Center' },
-      ]
+      { href: '/', label: 'Home' },
+      { href: '/dashboard', label: 'Dashboard' },
+      { href: '/transactions', label: 'Transactions' },
+      { href: '/features', label: 'Assets' },
+      { href: '/about', label: 'Goals' },
+      { href: '/contact', label: 'Help Center' },
+    ]
     : [
-        { href: '/', label: 'Home' },
-        { href: '/about', label: 'About' },
-        { href: '/contact', label: 'Help Center' },
-      ]
+      { href: '/', label: 'Home' },
+      { href: '/about', label: 'About' },
+      { href: '/contact', label: 'Help Center' },
+    ]
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#334155] bg-[#0F172A]/90 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur">
@@ -90,12 +93,24 @@ const Navbar = () => {
               <span className="hidden rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-2 text-sm text-[#D4F2D3] sm:inline-flex">
                 {user?.name || user?.email}
               </span>
+
+              {showAddTransaction && (
+                <Link
+                  href="/transactions?add=true"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#10B981] px-4 py-2 text-sm font-semibold text-[#022C22] transition duration-300 hover:-translate-y-0.5 hover:bg-[#34D399]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Transaction
+                </Link>
+              )}
+
               <Link
                 href="/dashboard"
                 className="rounded-full border border-[#10B981]/40 px-4 py-2 text-[#D4F2D3] transition hover:border-[#10B981] hover:text-white"
               >
                 Dashboard
               </Link>
+
               <button
                 type="button"
                 onClick={handleLogout}
@@ -141,6 +156,13 @@ const Navbar = () => {
                 >
                   Logout
                 </button>
+                <Link
+                  href="/transactions?add=true"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-[#022C22] transition hover:bg-[#34D399]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Transaction
+                </Link>
               </>
             ) : (
               <Link
