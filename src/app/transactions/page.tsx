@@ -8,6 +8,7 @@ import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
 import { useSession } from "@/hooks/useSession";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, TRANSACTION_TYPES } from "@/constants/transaction";
+import AppFooter from "../../components/AppFooter";
 
 interface TransactionRecord {
     _id: string;
@@ -28,6 +29,17 @@ const initialForm = {
     paymentMethod: "Cash",
     date: new Date().toISOString().slice(0, 10),
 };
+
+const PAYMENT_METHODS = [
+    "Cash",
+    "Online",
+    "UPI",
+    "Credit Card",
+    "Debit Card",
+    "Bank Transfer",
+    "Cheque",
+    "Other",
+] as const;
 
 export default function TransactionsPage() {
     const { status } = useSession();
@@ -220,7 +232,24 @@ export default function TransactionsPage() {
 
                             <label className="text-sm text-[#E2E8F0]">
                                 <span className="mb-2 block">Payment Method</span>
-                                <input value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className="w-full rounded-xl border border-[#334155] bg-[#111827] px-3 py-2 text-white" placeholder="Cash" />
+
+                                <select
+                                    value={form.paymentMethod}
+                                    onChange={(e) =>
+                                        setForm({
+                                            ...form,
+                                            paymentMethod: e.target.value,
+                                        })
+                                    }
+                                    className="w-full rounded-xl border border-[#334155] bg-[#111827] px-3 py-2 text-white"
+                                    required
+                                >
+                                    {PAYMENT_METHODS.map((method) => (
+                                        <option key={method} value={method}>
+                                            {method}
+                                        </option>
+                                    ))}
+                                </select>
                             </label>
                         </div>
 
@@ -314,7 +343,7 @@ export default function TransactionsPage() {
                     </section>
                 </div>
             </main>
-            <Footer />
+            <AppFooter />
         </>
     );
 }
