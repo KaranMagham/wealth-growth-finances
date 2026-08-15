@@ -19,6 +19,24 @@ interface TransactionRecord {
   createdAt: string
 }
 
+interface BudgetRecord {
+  _id: string;
+  category: string;
+  limit: number;
+  spent: number;
+  remaining: number;
+  percentageUsed: number;
+}
+
+interface GoalRecord {
+  _id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  targetDate: string;
+  completed: boolean;
+}
+
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
@@ -34,49 +52,75 @@ export default function DashboardPage() {
   const router = useRouter()
   const [transactions, setTransactions] = useState<TransactionRecord[]>([])
   const [loading, setLoading] = useState(false)
+  const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
+  const [goals, setGoals] = useState<GoalRecord[]>([]);
 
   const user = session?.user
   const displayName = user?.name || user?.email || "Investor"
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login")
-      return
+      router.replace("/login");
+      return;
     }
 
     if (status !== "authenticated") {
-      return
+      return;
     }
 
-    let isCancelled = false
+    let isCancelled = false;
 
-    const loadTransactions = async () => {
-      setLoading(true)
+    const loadDashboardData = async () => {
+      setLoading(true);
+
       try {
-        const response = await fetch("/api/transactions")
-        const payload = await response.json()
+        const [transactionsResponse, budgetsResponse, goalsResponse] =
+          await Promise.all([
+            fetch("/api/transactions"),
+            fetch("/api/budgets"),
+            fetch("/api/goals"),
+          ]);
 
-        if (!isCancelled && payload.success) {
-          setTransactions(payload.transactions || [])
+        const [transactionsPayload, budgetsPayload, goalsPayload] =
+          await Promise.all([
+            transactionsResponse.json(),
+            budgetsResponse.json(),
+            goalsResponse.json(),
+          ]);
+
+        if (isCancelled) {
+          return;
+        }
+
+        if (transactionsPayload.success) {
+          setTransactions(transactionsPayload.transactions || []);
+        }
+
+        if (budgetsPayload.success) {
+          setBudgets(budgetsPayload.budgets || []);
+        }
+
+        if (goalsPayload.success) {
+          setGoals(goalsPayload.goals || []);
         }
       } catch (error) {
-        console.error(error)
+        console.error("Dashboard loading error:", error);
       } finally {
         if (!isCancelled) {
-          setLoading(false)
+          setLoading(false);
         }
       }
-    }
+    };
 
     const timer = window.setTimeout(() => {
-      void loadTransactions()
-    }, 0)
+      void loadDashboardData();
+    }, 0);
 
     return () => {
-      isCancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [router, status])
+      isCancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [router, status]);
 
   const stats = useMemo(() => {
     const income = transactions.reduce(
@@ -165,6 +209,41 @@ export default function DashboardPage() {
     { label: "Balance", value: formatCurrency(stats.balance), tone: stats.balance >= 0 ? "text-[#10B981]" : "text-amber-400" },
     { label: "Savings", value: formatCurrency(stats.savings), tone: "text-[#10B981]" },
   ]
+
+  const totalBudget = budgets.reduce(
+    (sum, budget) => sum + budget.limit,
+    0
+  );
+
+  const totalBudgetSpent = budgets.reduce(
+    (sum, budget) => sum + budget.spent,
+    0
+  );
+
+  const budgetUsage =
+    totalBudget > 0
+      ? Math.min(
+        Math.round((totalBudgetSpent / totalBudget) * 100),
+        100
+      )
+      : 0;
+
+  const activeGoals = goals.filter((goal) => !goal.completed);
+
+  const closestGoal = activeGoals
+    .map((goal) => ({
+      ...goal,
+      progress:
+        goal.targetAmount > 0
+          ? Math.min(
+            Math.round(
+              (goal.currentAmount / goal.targetAmount) * 100
+            ),
+            100
+          )
+          : 0,
+    }))
+    .sort((a, b) => b.progress - a.progress)[0];
 
   if (status === "loading") {
     return (
@@ -357,6 +436,137 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <section className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">
+                    Budget Progress
+                  </h2>
+                  <p className="mt-1 text-sm text-[#94A3B8]">
+                    Current spending across your budgets
+                  </p>
+                </div>
+
+                <Link
+                  href="/budgets"
+                  className="text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
+                >
+                  View budgets
+                </Link>
+              </div>
+
+              <div className="mt-5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#94A3B8]">
+                    {formatCurrency(totalBudgetSpent)} spent
+                  </span>
+
+                  <span className="text-[#CBD5E1]">
+                    {formatCurrency(totalBudget)} limit
+                  </span>
+                </div>
+
+                <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#1F2937]">
+                  <div
+                    className={`h-full rounded-full transition-all ${budgetUsage >= 100
+                        ? "bg-rose-500"
+                        : budgetUsage >= 80
+                          ? "bg-amber-400"
+                          : "bg-[#10B981]"
+                      }`}
+                    style={{ width: `${budgetUsage}%` }}
+                  />
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-[#10B981]">
+                    {budgetUsage}% used
+                  </span>
+
+                  <span className="text-sm text-[#94A3B8]">
+                    {budgets.length} budget{budgets.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+
+                {budgets.length === 0 && (
+                  <p className="mt-4 text-sm text-[#94A3B8]">
+                    Create a budget to start tracking your spending.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">
+                    Goal Progress
+                  </h2>
+                  <p className="mt-1 text-sm text-[#94A3B8]">
+                    Your closest active financial goal
+                  </p>
+                </div>
+
+                <Link
+                  href="/goals"
+                  className="text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
+                >
+                  View goals
+                </Link>
+              </div>
+
+              {closestGoal ? (
+                <div className="mt-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-white">
+                        {closestGoal.name}
+                      </p>
+
+                      <p className="mt-1 text-sm text-[#94A3B8]">
+                        {formatCurrency(closestGoal.currentAmount)} of{" "}
+                        {formatCurrency(closestGoal.targetAmount)}
+                      </p>
+                    </div>
+
+                    <span className="text-lg font-semibold text-[#10B981]">
+                      {closestGoal.progress}%
+                    </span>
+                  </div>
+
+                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#1F2937]">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#10B981] to-[#34D399] transition-all"
+                      style={{ width: `${closestGoal.progress}%` }}
+                    />
+                  </div>
+
+                  <p className="mt-3 text-sm text-[#94A3B8]">
+                    {formatCurrency(
+                      Math.max(
+                        closestGoal.targetAmount -
+                        closestGoal.currentAmount,
+                        0
+                      )
+                    )}{" "}
+                    remaining
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-5 text-sm text-[#94A3B8]">
+                  Create a goal to start tracking your progress.
+                </p>
+              )}
+
+              {goals.some((goal) => goal.completed) && (
+                <div className="mt-4 rounded-xl border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-2 text-sm text-[#D4F2D3]">
+                  🎉 You have completed at least one goal.
+                </div>
+              )}
+            </section>
           </div>
 
           <section className="mt-6 rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">

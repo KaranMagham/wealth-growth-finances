@@ -4,14 +4,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, ChevronDown, Plus } from 'lucide-react'
 import { useSession } from '@/hooks/useSession'
-import { Plus } from "lucide-react";
+
 
 const Navbar = () => {
   const { status, session } = useSession()
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isMoreOpen, setIsMoreOpen] = useState(false)
   const pathname = usePathname();
 
   const showAddTransaction = pathname !== "/transactions";
@@ -30,18 +31,19 @@ const Navbar = () => {
 
   const mobileLinks = isAuthenticated
     ? [
-      { href: '/', label: 'Home' },
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/transactions', label: 'Transactions' },
-      { href: '/features', label: 'Assets' },
-      { href: '/about', label: 'Goals' },
-      { href: '/contact', label: 'Help Center' },
+      { href: "/", label: "Home" },
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/transactions", label: "Transactions" },
+      { href: "/budgets", label: "Budgets" },
+      { href: "/goals", label: "Goals" },
+      { href: "/features", label: "Assets" },
+      { href: "/contact", label: "Help Center" },
     ]
     : [
-      { href: '/', label: 'Home' },
-      { href: '/about', label: 'About' },
-      { href: '/contact', label: 'Help Center' },
-    ]
+      { href: "/", label: "Home" },
+      { href: "/about", label: "About" },
+      { href: "/contact", label: "Help Center" },
+    ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#334155] bg-[#0F172A]/90 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur">
@@ -66,7 +68,10 @@ const Navbar = () => {
           type="button"
           aria-label="Toggle navigation"
           aria-expanded={isMenuOpen}
-          onClick={() => setIsMenuOpen((open) => !open)}
+          onClick={() => {
+            setIsMenuOpen(false);
+            setIsMoreOpen(false);
+          }}
           className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#10B981]/30 bg-[#111827]/80 text-[#D4F2D3] lg:hidden"
         >
           {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -94,10 +99,47 @@ const Navbar = () => {
                 {user?.name || user?.email}
               </span>
 
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsMoreOpen((open) => !open)}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#10B981]/30 px-4 py-2 text-[#D4F2D3] transition hover:border-[#10B981] hover:text-white"
+                  aria-expanded={isMoreOpen}
+                >
+                  More
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${isMoreOpen ? "rotate-180" : ""
+                      }`}
+                  />
+                </button>
+
+                {isMoreOpen && (
+                  <div className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-[#334155] bg-[#0F172A] p-2 shadow-2xl">
+                    {[
+                      { href: "/transactions", label: "Transactions" },
+                      { href: "/budgets", label: "Budgets" },
+                      { href: "/goals", label: "Goals" },
+                      { href: "/features", label: "Assets" },
+                      { href: "/reports", label: "Reports" },
+                    ].map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setIsMoreOpen(false)}
+                        className="block rounded-xl px-3 py-2 text-sm text-[#CBD5E1] transition hover:bg-[#111827] hover:text-[#10B981]"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {showAddTransaction && (
                 <Link
                   href="/transactions?add=true"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#10B981] px-4 py-2 text-sm font-semibold text-[#022C22] transition duration-300 hover:-translate-y-0.5 hover:bg-[#34D399]"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-3 text-sm font-semibold text-[#D4F2D3] transition hover:border-[#10B981]/70 hover:bg-[#10B981]/20 hover:text-white"
                 >
                   <Plus className="h-4 w-4" />
                   Add Transaction
@@ -156,13 +198,74 @@ const Navbar = () => {
                 >
                   Logout
                 </button>
-                <Link
-                  href="/transactions?add=true"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-[#022C22] transition hover:bg-[#34D399]"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Transaction
-                </Link>
+                {/* <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsMoreOpen((open) => !open)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[#10B981]/30 px-4 py-2 text-[#D4F2D3] transition hover:border-[#10B981] hover:text-white"
+                    aria-expanded={isMoreOpen}
+                  >
+                    More
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${isMoreOpen ? "rotate-180" : ""
+                        }`}
+                    />
+                  </button>
+
+                  {isMoreOpen && (
+                    <div className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-[#334155] bg-[#0F172A] p-2 shadow-2xl">
+                      <Link
+                        href="/transactions"
+                        onClick={() => setIsMoreOpen(false)}
+                        className="block rounded-xl px-3 py-2 text-sm text-[#CBD5E1] transition hover:bg-[#111827] hover:text-[#10B981]"
+                      >
+                        Transactions
+                      </Link>
+
+                      <Link
+                        href="/budgets"
+                        onClick={() => setIsMoreOpen(false)}
+                        className="block rounded-xl px-3 py-2 text-sm text-[#CBD5E1] transition hover:bg-[#111827] hover:text-[#10B981]"
+                      >
+                        Budgets
+                      </Link>
+
+                      <Link
+                        href="/goals"
+                        onClick={() => setIsMoreOpen(false)}
+                        className="block rounded-xl px-3 py-2 text-sm text-[#CBD5E1] transition hover:bg-[#111827] hover:text-[#10B981]"
+                      >
+                        Goals
+                      </Link>
+
+                      <Link
+                        href="/features"
+                        onClick={() => setIsMoreOpen(false)}
+                        className="block rounded-xl px-3 py-2 text-sm text-[#CBD5E1] transition hover:bg-[#111827] hover:text-[#10B981]"
+                      >
+                        Assets
+                      </Link>
+
+                      <Link
+                        href="/reports"
+                        onClick={() => setIsMoreOpen(false)}
+                        className="block rounded-xl px-3 py-2 text-sm text-[#CBD5E1] transition hover:bg-[#111827] hover:text-[#10B981]"
+                      >
+                        Reports
+                      </Link>
+                    </div>
+                  )}
+                </div> */}
+                {showAddTransaction && (
+                  <Link
+                    href="/transactions?add=true"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-3 text-sm font-semibold text-[#D4F2D3] transition hover:border-[#10B981]/70 hover:bg-[#10B981]/20 hover:text-white"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Transaction
+                  </Link>
+                )}
               </>
             ) : (
               <Link
