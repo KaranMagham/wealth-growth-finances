@@ -22,12 +22,16 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/logout', { method: 'POST', credentials: 'include' })
+      await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
     } finally {
-      setIsMenuOpen(false)
-      router.push('/login')
+      setIsMenuOpen(false);
+      setIsMoreOpen(false);
+      router.push("/login");
     }
-  }
+  };
 
   const mobileLinks = isAuthenticated
     ? [
@@ -48,7 +52,14 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 border-b border-[#334155] bg-[#0F172A]/90 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
-        <Link href="/" className="flex items-center gap-3" onClick={() => setIsMenuOpen(false)}>
+        <Link
+          href="/"
+          className="flex items-center gap-3"
+          onClick={() => {
+            setIsMenuOpen(false);
+            setIsMoreOpen(false);
+          }}
+        >
           <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#D4AF37] bg-[#1E293B] p-1 shadow-lg shadow-[#10B981]/20">
             <Image
               src="/logomain.png"
@@ -69,7 +80,7 @@ const Navbar = () => {
           aria-label="Toggle navigation"
           aria-expanded={isMenuOpen}
           onClick={() => {
-            setIsMenuOpen(false);
+            setIsMenuOpen((open) => !open);
             setIsMoreOpen(false);
           }}
           className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#10B981]/30 bg-[#111827]/80 text-[#D4F2D3] lg:hidden"
