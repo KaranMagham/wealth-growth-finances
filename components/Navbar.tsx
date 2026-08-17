@@ -40,7 +40,7 @@ const Navbar = () => {
       { href: "/transactions", label: "Transactions" },
       { href: "/budgets", label: "Budgets" },
       { href: "/goals", label: "Goals" },
-      { href: "/features", label: "Assets" },
+      { href: "/investments", label: "Assets" },
       { href: "/contact", label: "Help Center" },
     ]
     : [
@@ -130,7 +130,7 @@ const Navbar = () => {
                       { href: "/transactions", label: "Transactions" },
                       { href: "/budgets", label: "Budgets" },
                       { href: "/goals", label: "Goals" },
-                      { href: "/features", label: "Assets" },
+                      { href: "/investments", label: "Assets" },
                       { href: "/reports", label: "Reports" },
                     ].map((link) => (
                       <Link
