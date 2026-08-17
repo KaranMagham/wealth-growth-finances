@@ -1,26 +1,22 @@
 export const TRANSACTION_TYPES = ["Income", "Expense"] as const;
 
-export const EXPENSE_CATEGORIES = [
-  "Food",
-  "Transport",
-  "Shopping",
-  "Bills",
-  "Healthcare",
-  "Education",
-  "Entertainment",
-  "Travel",
-  "EMI",
-  "Insurance",
-  "Others",
+export const INCOME_CATEGORIES = [
+  "Business",
+  "Extra Income",
+  "Loan",
+  "Salary",
+  "Other",
 ] as const;
 
-export const INCOME_CATEGORIES = [
-  "Salary",
-  "Freelance",
-  "Business",
-  "Investment",
-  "Rental",
-  "Bonus",
-  "Gift",
-  "Others",
+export const EXPENSE_CATEGORIES = [
+  "Bills & Fees",
+  "Entertainment",
+  "Family & Personal",
+  "Food & Drink",
+  "Groceries",
+  "Shopping",
+  "Subscriptions",
+  "Transport",
+  "Travel",
+  "Other",
 ] as const;
