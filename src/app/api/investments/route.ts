@@ -91,6 +91,13 @@ export async function POST(request: NextRequest) {
             .trim()
             .toUpperCase();
 
+        const schemeCode = String(body.schemeCode ?? "")
+            .trim();
+
+        const goldPurity = String(body.goldPurity ?? "")
+            .trim()
+            .toUpperCase();
+
         const quantity = Number(body.quantity);
         const buyPrice = Number(body.buyPrice);
 
@@ -121,6 +128,42 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 400 }
             );
+        }
+
+        if (type === "Stocks" && !symbol) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Stock symbol is required",
+                },
+                { status: 400 }
+            );
+        }
+
+        if (type === "Mutual Funds") {
+            if (!/^\d+$/.test(schemeCode)) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "A valid mutual fund scheme code is required",
+                    },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (type === "Gold") {
+            if (!["18K", "22K", "24K"].includes(goldPurity)) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "Gold purity must be 18K, 22K, or 24K",
+                    },
+                    { status: 400 }
+                );
+            }
         }
 
         if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -186,7 +229,21 @@ export async function POST(request: NextRequest) {
                         userId,
                         name,
                         type,
-                        symbol: symbol || undefined,
+                        symbol:
+                            type === "Stocks"
+                                ? symbol || undefined
+                                : undefined,
+
+                        schemeCode:
+                            type === "Mutual Funds"
+                                ? schemeCode
+                                : undefined,
+
+                        goldPurity:
+                            type === "Gold"
+                                ? (goldPurity as "18K" | "22K" | "24K")
+                                : undefined,
+
                         quantity,
                         averageBuyPrice: buyPrice,
                         totalInvested: calculations.totalInvested,

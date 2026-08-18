@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
 import Investment from "@/models/Investment";
-import { calculateInvestmentValues } from "@/lib/investmentCalculations";
 
 async function getUserId() {
   const session = await auth.api.getSession({
@@ -13,6 +12,13 @@ async function getUserId() {
 
   return session?.user?.id ?? null;
 }
+
+type RefreshResult = {
+  success: boolean;
+  investment?: unknown;
+  quote?: unknown;
+  message?: string;
+};
 
 export async function POST(request: Request) {
   try {
@@ -32,11 +38,29 @@ export async function POST(request: Request) {
 
     const investments = await Investment.find({
       userId,
-      type: "Stocks",
-      symbol: {
-        $exists: true,
-        $nin: ["", null],
-      },
+      $or: [
+        {
+          type: "Stocks",
+          symbol: {
+            $exists: true,
+            $nin: ["", null],
+          },
+        },
+        {
+          type: "Mutual Funds",
+          schemeCode: {
+            $exists: true,
+            $nin: ["", null],
+          },
+        },
+        {
+          type: "Gold",
+          goldPurity: {
+            $exists: true,
+            $nin: ["", null],
+          },
+        },
+      ],
     });
 
     if (investments.length === 0) {
@@ -50,86 +74,62 @@ export async function POST(request: Request) {
     }
 
     const origin = new URL(request.url).origin;
-    const updatedInvestments = [];
-    const failures = [];
+    const updatedInvestments: unknown[] = [];
+    const failures: unknown[] = [];
 
     for (const investment of investments) {
       try {
-        const quoteUrl = new URL(
-          "/api/market/stocks/quote",
+        const refreshUrl = new URL(
+          `/api/investments/${investment._id.toString()}/refresh-price`,
           origin
         );
 
-        quoteUrl.searchParams.set(
-          "symbol",
-          investment.symbol!
-        );
-
-        const quoteResponse = await fetch(
-          quoteUrl.toString(),
+        const refreshResponse = await fetch(
+          refreshUrl.toString(),
           {
-            method: "GET",
+            method: "POST",
+            headers: {
+              cookie: request.headers.get("cookie") ?? "",
+            },
             cache: "no-store",
           }
         );
 
-        const quoteData = await quoteResponse.json();
+        const refreshData =
+          (await refreshResponse.json()) as RefreshResult;
 
-        if (!quoteResponse.ok || !quoteData.success) {
+        if (!refreshResponse.ok || !refreshData.success) {
           failures.push({
             investmentId: investment._id.toString(),
+            name: investment.name,
+            type: investment.type,
             symbol: investment.symbol,
+            schemeCode: investment.schemeCode,
+            goldPurity: investment.goldPurity,
             message:
-              quoteData.message ||
-              "Unable to load quote",
+              refreshData.message ||
+              "Unable to refresh investment",
           });
 
           continue;
         }
 
-        const currentPrice = Number(
-          quoteData.quote?.price
+        updatedInvestments.push(
+          refreshData.investment
         );
-
-        if (!Number.isFinite(currentPrice) || currentPrice < 0) {
-          failures.push({
-            investmentId: investment._id.toString(),
-            symbol: investment.symbol,
-            message: "Invalid market price",
-          });
-
-          continue;
-        }
-
-        const calculations = calculateInvestmentValues({
-          quantity: investment.quantity,
-          purchasePrice: investment.averageBuyPrice,
-          currentPrice,
-        });
-
-        investment.currentPrice = currentPrice;
-        investment.totalInvested =
-          calculations.totalInvested;
-        investment.currentValue =
-          calculations.currentValue;
-        investment.profitLoss = calculations.profitLoss;
-        investment.returnPercentage =
-          calculations.returnPercentage;
-        investment.priceSource = "MARKET_API";
-        investment.priceUpdatedAt = new Date();
-
-        await investment.save();
-
-        updatedInvestments.push(investment);
       } catch (error) {
         console.error(
-          `Failed to refresh ${investment.symbol}:`,
+          `Failed to refresh investment ${investment._id}:`,
           error
         );
 
         failures.push({
           investmentId: investment._id.toString(),
+          name: investment.name,
+          type: investment.type,
           symbol: investment.symbol,
+          schemeCode: investment.schemeCode,
+          goldPurity: investment.goldPurity,
           message: "Unable to refresh this investment",
         });
       }

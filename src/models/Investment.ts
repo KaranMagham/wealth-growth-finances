@@ -28,6 +28,8 @@ export interface IInvestment extends Document {
     returnPercentage: number;
     purchaseDate: Date;
     notes?: string;
+    goldPurity?: "18K" | "22K" | "24K";
+    schemeCode?: string;
     priceSource: "MANUAL" | "MARKET_API";
     priceUpdatedAt?: Date;
     createdAt: Date;
@@ -82,6 +84,16 @@ const InvestmentSchema = new Schema<IInvestment>(
             type: Number,
             required: true,
             min: 0,
+        },
+
+        goldPurity: {
+            type: String,
+            enum: ["18K", "22K", "24K"],
+        },
+
+        schemeCode: {
+            type: String,
+            trim: true,
         },
 
         priceSource: {

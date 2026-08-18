@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowRight, BadgeCheck, Briefcase, CreditCard, Landmark, Sparkles, Target, TrendingUp } from "lucide-react"
 import Navbar from "../../../components/Navbar"
 import AppFooter from "../../components/AppFooter";
-import { useSession } from "@/hooks/useSession"
+import { useSession } from "@/hooks/useSession";
+import { refreshAllInvestments } from "@/lib/api/investments";
 
 interface TransactionRecord {
   _id: string
@@ -37,6 +38,26 @@ interface GoalRecord {
   completed: boolean;
 }
 
+interface InvestmentRecord {
+  _id: string;
+  name: string;
+  type: string;
+  symbol?: string;
+  schemeCode?: string;
+  goldPurity?: "18K" | "22K" | "24K";
+  quantity: number;
+  averageBuyPrice: number;
+  currentPrice: number;
+  currentValue: number;
+  totalInvested: number;
+  profitLoss: number;
+  returnPercentage: number;
+  purchaseDate?: string;
+  createdAt?: string;
+  priceSource?: "MANUAL" | "MARKET_API";
+  priceUpdatedAt?: string;
+}
+
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
@@ -47,16 +68,121 @@ function formatCurrency(value: number) {
   return currencyFormatter.format(value)
 }
 
+function formatInvestmentDate(
+  investment: InvestmentRecord
+) {
+  const date =
+    investment.createdAt || investment.purchaseDate;
+
+  if (!date) {
+    return "Date unavailable";
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date unavailable";
+  }
+
+  return `Added ${parsedDate.toLocaleDateString()}`;
+}
+
 export default function DashboardPage() {
   const { status, session } = useSession()
   const router = useRouter()
   const [transactions, setTransactions] = useState<TransactionRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
+  const [investments, setInvestments] = useState<
+    InvestmentRecord[]
+  >([]);
   const [goals, setGoals] = useState<GoalRecord[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] =
+    useState("");
 
   const user = session?.user
   const displayName = user?.name || user?.email || "Investor"
+
+  const loadDashboardData = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+
+      try {
+        const [
+          transactionsResponse,
+          budgetsResponse,
+          goalsResponse,
+          investmentsResponse,
+        ] = await Promise.all([
+          fetch("/api/transactions", {
+            credentials: "include",
+            cache: "no-store",
+            signal,
+          }),
+          fetch("/api/budgets", {
+            credentials: "include",
+            cache: "no-store",
+            signal,
+          }),
+          fetch("/api/goals", {
+            credentials: "include",
+            cache: "no-store",
+            signal,
+          }),
+          fetch("/api/investments", {
+            credentials: "include",
+            cache: "no-store",
+            signal,
+          }),
+        ]);
+
+        const [
+          transactionsPayload,
+          budgetsPayload,
+          goalsPayload,
+          investmentsPayload,
+        ] = await Promise.all([
+          transactionsResponse.json(),
+          budgetsResponse.json(),
+          goalsResponse.json(),
+          investmentsResponse.json(),
+        ]);
+
+        if (transactionsPayload.success) {
+          setTransactions(
+            transactionsPayload.transactions || []
+          );
+        }
+
+        if (budgetsPayload.success) {
+          setBudgets(budgetsPayload.budgets || []);
+        }
+
+        if (goalsPayload.success) {
+          setGoals(goalsPayload.goals || []);
+        }
+
+        if (investmentsPayload.success) {
+          setInvestments(
+            investmentsPayload.investments || []
+          );
+        }
+      } catch (error) {
+        if (error instanceof DOMException &&
+          error.name === "AbortError") {
+          return;
+        }
+
+        console.error("Dashboard loading error:", error);
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -68,59 +194,14 @@ export default function DashboardPage() {
       return;
     }
 
-    let isCancelled = false;
-
-    const loadDashboardData = async () => {
-      setLoading(true);
-
-      try {
-        const [transactionsResponse, budgetsResponse, goalsResponse] =
-          await Promise.all([
-            fetch("/api/transactions"),
-            fetch("/api/budgets"),
-            fetch("/api/goals"),
-          ]);
-
-        const [transactionsPayload, budgetsPayload, goalsPayload] =
-          await Promise.all([
-            transactionsResponse.json(),
-            budgetsResponse.json(),
-            goalsResponse.json(),
-          ]);
-
-        if (isCancelled) {
-          return;
-        }
-
-        if (transactionsPayload.success) {
-          setTransactions(transactionsPayload.transactions || []);
-        }
-
-        if (budgetsPayload.success) {
-          setBudgets(budgetsPayload.budgets || []);
-        }
-
-        if (goalsPayload.success) {
-          setGoals(goalsPayload.goals || []);
-        }
-      } catch (error) {
-        console.error("Dashboard loading error:", error);
-      } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
     const timer = window.setTimeout(() => {
       void loadDashboardData();
     }, 0);
 
     return () => {
-      isCancelled = true;
       window.clearTimeout(timer);
     };
-  }, [router, status]);
+  }, [status, router, loadDashboardData]);
 
   const stats = useMemo(() => {
     const income = transactions.reduce(
@@ -196,8 +277,53 @@ export default function DashboardPage() {
     };
   }, [transactions]);
 
+  const investmentTotals = useMemo(() => {
+    return investments.reduce(
+      (totals, investment) => ({
+        invested:
+          totals.invested + investment.totalInvested,
+        current:
+          totals.current + investment.currentValue,
+        profitLoss:
+          totals.profitLoss + investment.profitLoss,
+      }),
+      {
+        invested: 0,
+        current: 0,
+        profitLoss: 0,
+      }
+    );
+  }, [investments]);
+
+  const portfolioReturnPercentage =
+    investmentTotals.invested > 0
+      ? (investmentTotals.profitLoss /
+        investmentTotals.invested) *
+      100
+      : 0;
+
+  const investmentTypeCounts = investments.reduce<
+    Record<string, number>
+  >((counts, investment) => {
+    counts[investment.type] =
+      (counts[investment.type] || 0) + 1;
+
+    return counts;
+  }, {});
+
+  const topInvestmentTypes = Object.entries(
+    investmentTypeCounts
+  ).sort(([, countA], [, countB]) => countB - countA);
+
   const kpis = [
-    { label: "Net Worth", value: formatCurrency(stats.balance), hint: stats.balance >= 0 ? "Positive balance from your activity" : "Spending is above income" },
+    {
+      label: "Cash Balance",
+      value: formatCurrency(stats.balance),
+      hint:
+        stats.balance >= 0
+          ? "Positive balance from your activity"
+          : "Spending is above income",
+    },
     { label: "Income", value: formatCurrency(stats.income), hint: "Total income recorded" },
     { label: "Expense", value: formatCurrency(stats.expense), hint: "Total expense recorded" },
     { label: "Savings Rate", value: `${stats.savingsRate}%`, hint: stats.savingsRate >= 0 ? "Healthy monthly pace" : "Adjust spending to improve savings" },
@@ -256,8 +382,46 @@ export default function DashboardPage() {
     )
   }
 
-  if (status === "unauthenticated") {
-    return null
+  const latestInvestments = [...investments]
+    .sort((a, b) => {
+      const dateA = a.createdAt || a.purchaseDate;
+      const dateB = b.createdAt || b.purchaseDate;
+
+      const timeA = dateA
+        ? new Date(dateA).getTime()
+        : 0;
+
+      const timeB = dateB
+        ? new Date(dateB).getTime()
+        : 0;
+
+      return timeB - timeA;
+    })
+    .slice(0, 3);
+
+  async function handleRefreshPrices() {
+    try {
+      setRefreshing(true);
+      setRefreshMessage("");
+
+      const result = await refreshAllInvestments();
+
+      setRefreshMessage(
+        result.failedCount > 0
+          ? `Updated ${result.updatedCount} investment(s). ${result.failedCount} failed.`
+          : `Updated ${result.updatedCount} investment(s).`
+      );
+
+      await loadDashboardData();
+    } catch (error) {
+      setRefreshMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to refresh investment prices"
+      );
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   return (
@@ -270,9 +434,29 @@ export default function DashboardPage() {
             <section className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_50px_rgba(16,185,129,0.12)] sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/40 bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#D4F2D3]">
-                    <Sparkles className="h-4 w-4 text-[#10B981]" />
-                    Welcome back
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/40 bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#D4F2D3]">
+                      <Sparkles className="h-4 w-4 text-[#10B981]" />
+                      Welcome back
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleRefreshPrices}
+                        disabled={refreshing}
+                        className="rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#34D399] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {refreshing
+                          ? "Refreshing prices..."
+                          : "Refresh prices"}
+                      </button>
+
+                      {refreshMessage && (
+                        <p className="text-sm text-[#94A3B8]">
+                          {refreshMessage}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <h1 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Welcome, {displayName}</h1>
                   <p className="mt-3 max-w-xl text-sm leading-7 text-[#94A3B8] sm:text-base">
@@ -335,6 +519,7 @@ export default function DashboardPage() {
               </div>
             </aside>
           </div>
+
 
           <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
             {kpis.map((item) => (
@@ -472,10 +657,10 @@ export default function DashboardPage() {
                 <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#1F2937]">
                   <div
                     className={`h-full rounded-full transition-all ${budgetUsage >= 100
-                        ? "bg-rose-500"
-                        : budgetUsage >= 80
-                          ? "bg-amber-400"
-                          : "bg-[#10B981]"
+                      ? "bg-rose-500"
+                      : budgetUsage >= 80
+                        ? "bg-amber-400"
+                        : "bg-[#10B981]"
                       }`}
                     style={{ width: `${budgetUsage}%` }}
                   />
@@ -568,6 +753,259 @@ export default function DashboardPage() {
               )}
             </section>
           </div>
+
+          <section className="mt-6 rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6 shadow-[0_0_30px_rgba(16,185,129,0.06)]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-xl font-semibold text-white">
+                    Investments
+                  </h2>
+
+                  <span className="rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-2.5 py-1 text-xs font-semibold text-[#10B981]">
+                    {investments.length}{" "}
+                    {investments.length === 1
+                      ? "asset"
+                      : "assets"}
+                  </span>
+                </div>
+
+                <p className="mt-1 text-sm text-[#94A3B8]">
+                  Your portfolio performance at a glance
+                </p>
+              </div>
+
+              <Link
+                href="/investments"
+                className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
+              >
+                Manage portfolio
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {investments.length > 0 ? (
+              <>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
+                    <p className="text-sm text-[#94A3B8]">
+                      Total invested
+                    </p>
+
+                    <p className="mt-2 text-xl font-semibold text-white">
+                      {formatCurrency(investmentTotals.invested)}
+                    </p>
+
+                    <p className="mt-1 text-xs text-[#64748B]">
+                      Across {investments.length}{" "}
+                      {investments.length === 1 ? "asset" : "assets"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
+                    <p className="text-sm text-[#94A3B8]">
+                      Current value
+                    </p>
+
+                    <p className="mt-2 text-xl font-semibold text-white">
+                      {formatCurrency(investmentTotals.current)}
+                    </p>
+
+                    <p className="mt-1 text-xs text-[#64748B]">
+                      Latest recorded valuation
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
+                    <p className="text-sm text-[#94A3B8]">
+                      Total profit/loss
+                    </p>
+
+                    <p
+                      className={`mt-2 text-xl font-semibold ${investmentTotals.profitLoss >= 0
+                        ? "text-[#10B981]"
+                        : "text-rose-400"
+                        }`}
+                    >
+                      {investmentTotals.profitLoss >= 0
+                        ? "+"
+                        : ""}
+                      {formatCurrency(
+                        investmentTotals.profitLoss
+                      )}
+                    </p>
+
+                    <p
+                      className={`mt-1 text-xs ${portfolioReturnPercentage >= 0
+                        ? "text-[#10B981]"
+                        : "text-rose-400"
+                        }`}
+                    >
+                      {portfolioReturnPercentage >= 0
+                        ? "+"
+                        : ""}
+                      {portfolioReturnPercentage.toFixed(2)}%
+                      overall return
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
+                    <p className="text-sm text-[#94A3B8]">
+                      Asset mix
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {topInvestmentTypes.map(([type, count]) => (
+                        <span
+                          key={type}
+                          className="rounded-full border border-[#334155] bg-[#0F172A] px-2 py-1 text-xs text-[#CBD5E1]"
+                        >
+                          {type}: {count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Portfolio status
+                    </p>
+
+                    <p className="mt-1 text-sm text-[#94A3B8]">
+                      {investmentTotals.profitLoss >= 0
+                        ? "Your portfolio is currently above its invested value."
+                        : "Your portfolio is currently below its invested value."}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${investmentTotals.profitLoss >= 0
+                      ? "bg-[#10B981]/10 text-[#10B981]"
+                      : "bg-rose-500/10 text-rose-400"
+                      }`}
+                  >
+                    {investmentTotals.profitLoss >= 0
+                      ? "Positive return"
+                      : "Negative return"}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-dashed border-[#334155] bg-[#111827]/50 p-6 text-center">
+                <p className="font-semibold text-white">
+                  Your portfolio is empty
+                </p>
+
+                <p className="mt-2 text-sm text-[#94A3B8]">
+                  Add your first investment to start tracking value and returns.
+                </p>
+
+                <Link
+                  href="/investments/new"
+                  className="mt-4 inline-flex rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#34D399]"
+                >
+                  Add investment
+                </Link>
+              </div>
+            )}
+          </section>
+
+          <section className="mt-6 rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  Latest Investments
+                </h2>
+
+                <p className="mt-1 text-sm text-[#94A3B8]">
+                  Your three most recently added investments
+                </p>
+              </div>
+
+              <Link
+                href="/investments"
+                className="text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
+              >
+                View all
+              </Link>
+            </div>
+
+            {latestInvestments.length > 0 ? (
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                {latestInvestments.map((investment) => (
+                  <div
+                    key={investment._id}
+                    className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-white">
+                          {investment.name}
+                        </h3>
+
+                        <p className="mt-1 text-xs text-[#94A3B8]">
+                          {investment.symbol ||
+                            investment.schemeCode ||
+                            investment.goldPurity ||
+                            "Manual investment"}
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-2 py-1 text-xs font-medium text-[#10B981]">
+                        {investment.type}
+                      </span>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="text-xs text-[#64748B]">
+                        Current value
+                      </p>
+
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {formatCurrency(investment.currentValue)}
+                      </p>
+
+                      <p
+                        className={`mt-1 text-sm font-semibold ${investment.profitLoss >= 0
+                          ? "text-[#10B981]"
+                          : "text-rose-400"
+                          }`}
+                      >
+                        {investment.profitLoss >= 0 ? "+" : ""}
+                        {formatCurrency(investment.profitLoss)}
+                      </p>
+
+                      <p className="mt-1 text-xs text-[#94A3B8]">
+                        Invested: {formatCurrency(investment.totalInvested)}
+                      </p>
+
+                    </div>
+
+                    <div className="mt-3 border-t border-[#1F2937] pt-3">
+                      <p className="mt-1 text-xs text-[#64748B]">
+                        {formatInvestmentDate(investment)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
+                <p className="text-sm text-[#94A3B8]">
+                  No investments added yet.
+                </p>
+
+                <Link
+                  href="/investments/new"
+                  className="mt-3 inline-flex text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
+                >
+                  Add your first investment
+                </Link>
+              </div>
+            )}
+          </section>
 
           <section className="mt-6 rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
             <div className="flex items-center justify-between gap-3">
