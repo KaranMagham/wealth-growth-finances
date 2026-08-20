@@ -10,6 +10,7 @@ export const INCOME_CATEGORIES = [
 
 export const EXPENSE_CATEGORIES = [
   "Bills & Fees",
+  "EMI",
   "Entertainment",
   "Family & Personal",
   "Food & Drink",
