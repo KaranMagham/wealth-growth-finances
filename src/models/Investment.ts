@@ -28,6 +28,16 @@ export interface IInvestment extends Document {
     returnPercentage: number;
     purchaseDate: Date;
     notes?: string;
+    bondFaceValue?: number;
+    bondCouponRate?: number;
+    bondMaturityDate?: Date;
+    bondInterestFrequency?:
+    | "Monthly"
+    | "Quarterly"
+    | "Half-yearly"
+    | "Yearly";
+    cryptoId?: string;
+    cryptoSymbol?: string;
     goldPurity?: "18K" | "22K" | "24K";
     schemeCode?: string;
     priceSource: "MANUAL" | "MARKET_API";
@@ -65,13 +75,13 @@ const InvestmentSchema = new Schema<IInvestment>(
         quantity: {
             type: Number,
             required: true,
-            min: 0,
+            min: 0.000001,
         },
 
         averageBuyPrice: {
             type: Number,
             required: true,
-            min: 0,
+            min: 0.01,
         },
 
         totalInvested: {
@@ -84,6 +94,42 @@ const InvestmentSchema = new Schema<IInvestment>(
             type: Number,
             required: true,
             min: 0,
+        },
+
+        bondFaceValue: {
+            type: Number,
+            min: 0,
+        },
+
+        bondCouponRate: {
+            type: Number,
+            min: 0,
+        },
+
+        bondMaturityDate: {
+            type: Date,
+        },
+
+        bondInterestFrequency: {
+            type: String,
+            enum: [
+                "Monthly",
+                "Quarterly",
+                "Half-yearly",
+                "Yearly",
+            ],
+        },
+
+        cryptoId: {
+            type: String,
+            trim: true,
+            lowercase: true,
+        },
+
+        cryptoSymbol: {
+            type: String,
+            trim: true,
+            uppercase: true,
         },
 
         goldPurity: {

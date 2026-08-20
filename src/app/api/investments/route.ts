@@ -6,7 +6,9 @@ import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
 import Investment from "@/models/Investment";
 import InvestmentTransaction from "@/models/InvestmentTransaction";
-import { calculateInvestmentValues } from "@/lib/investmentCalculations";
+import {
+    calculateInvestmentValues,
+} from "@/lib/investmentCalculations";
 
 const INVESTMENT_TYPES = [
     "Stocks",
@@ -19,7 +21,21 @@ const INVESTMENT_TYPES = [
     "Other",
 ] as const;
 
-type InvestmentType = (typeof INVESTMENT_TYPES)[number];
+type InvestmentType =
+    (typeof INVESTMENT_TYPES)[number];
+
+type BondInterestFrequency =
+    | "Monthly"
+    | "Quarterly"
+    | "Half-yearly"
+    | "Yearly";
+
+const VALID_BOND_FREQUENCIES = [
+    "Monthly",
+    "Quarterly",
+    "Half-yearly",
+    "Yearly",
+] as const;
 
 async function getUserId() {
     const session = await auth.api.getSession({
@@ -45,7 +61,9 @@ export async function GET() {
 
         await connectDB();
 
-        const investments = await Investment.find({ userId })
+        const investments = await Investment.find({
+            userId,
+        })
             .sort({ createdAt: -1 })
             .lean();
 
@@ -54,7 +72,10 @@ export async function GET() {
             investments,
         });
     } catch (error) {
-        console.error("GET /api/investments error:", error);
+        console.error(
+            "GET /api/investments error:",
+            error
+        );
 
         return NextResponse.json(
             {
@@ -98,6 +119,37 @@ export async function POST(request: NextRequest) {
             .trim()
             .toUpperCase();
 
+        const cryptoId = String(body.cryptoId ?? "")
+            .trim()
+            .toLowerCase();
+
+        const cryptoSymbol = String(
+            body.cryptoSymbol ?? ""
+        )
+            .trim()
+            .toUpperCase();
+
+        const bondFaceValue =
+            body.bondFaceValue === undefined ||
+                body.bondFaceValue === ""
+                ? undefined
+                : Number(body.bondFaceValue);
+
+        const bondCouponRate =
+            body.bondCouponRate === undefined ||
+                body.bondCouponRate === ""
+                ? undefined
+                : Number(body.bondCouponRate);
+
+        const bondMaturityDate = body.bondMaturityDate
+            ? new Date(String(body.bondMaturityDate))
+            : undefined;
+
+        const bondInterestFrequency =
+            body.bondInterestFrequency as
+            | BondInterestFrequency
+            | undefined;
+
         const quantity = Number(body.quantity);
         const buyPrice = Number(body.buyPrice);
 
@@ -107,7 +159,10 @@ export async function POST(request: NextRequest) {
                 ? buyPrice
                 : Number(body.currentPrice);
 
-        const purchaseDate = String(body.purchaseDate ?? "");
+        const purchaseDate = String(
+            body.purchaseDate ?? ""
+        );
+
         const notes = String(body.notes ?? "").trim();
 
         if (!name) {
@@ -130,11 +185,17 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (type === "Stocks" && !symbol) {
+        if (
+            (type === "Stocks" || type === "ETF") &&
+            !symbol
+        ) {
             return NextResponse.json(
                 {
                     success: false,
-                    message: "Stock symbol is required",
+                    message:
+                        type === "ETF"
+                            ? "ETF ticker is required"
+                            : "Stock symbol is required",
                 },
                 { status: 400 }
             );
@@ -154,12 +215,38 @@ export async function POST(request: NextRequest) {
         }
 
         if (type === "Gold") {
-            if (!["18K", "22K", "24K"].includes(goldPurity)) {
+            if (
+                !["18K", "22K", "24K"].includes(
+                    goldPurity
+                )
+            ) {
                 return NextResponse.json(
                     {
                         success: false,
                         message:
                             "Gold purity must be 18K, 22K, or 24K",
+                    },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (type === "Crypto") {
+            if (!cryptoId) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Crypto coin ID is required",
+                    },
+                    { status: 400 }
+                );
+            }
+
+            if (!cryptoSymbol) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Crypto symbol is required",
                     },
                     { status: 400 }
                 );
@@ -186,7 +273,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!Number.isFinite(currentPrice) || currentPrice < 0) {
+        if (
+            type !== "Bonds" &&
+            (!Number.isFinite(currentPrice) ||
+                currentPrice < 0)
+        ) {
             return NextResponse.json(
                 {
                     success: false,
@@ -196,7 +287,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const parsedPurchaseDate = new Date(purchaseDate);
+        const parsedPurchaseDate = new Date(
+            purchaseDate
+        );
 
         if (
             !purchaseDate ||
@@ -211,13 +304,85 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        if (type === "Bonds") {
+            if (
+                !Number.isFinite(bondFaceValue) ||
+                bondFaceValue! <= 0
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Bond face value is required",
+                    },
+                    { status: 400 }
+                );
+            }
+
+            if (
+                !Number.isFinite(bondCouponRate) ||
+                bondCouponRate! < 0
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Bond coupon rate is invalid",
+                    },
+                    { status: 400 }
+                );
+            }
+
+            if (
+                !bondMaturityDate ||
+                Number.isNaN(bondMaturityDate.getTime())
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "Bond maturity date is required",
+                    },
+                    { status: 400 }
+                );
+            }
+
+            if (
+                bondMaturityDate <= parsedPurchaseDate
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "Bond maturity date must be after purchase date",
+                    },
+                    { status: 400 }
+                );
+            }
+
+            if (
+                !bondInterestFrequency ||
+                !VALID_BOND_FREQUENCIES.includes(
+                    bondInterestFrequency
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "A valid bond interest frequency is required",
+                    },
+                    { status: 400 }
+                );
+            }
+        }
+
         await connectDB();
 
-        const calculations = calculateInvestmentValues({
-            quantity,
-            purchasePrice: buyPrice,
-            currentPrice,
-        });
+        const calculations =
+            calculateInvestmentValues({
+                quantity,
+                purchasePrice: buyPrice,
+                currentPrice,
+            });
 
         let createdInvestment;
         let createdTransaction;
@@ -229,28 +394,71 @@ export async function POST(request: NextRequest) {
                         userId,
                         name,
                         type,
+
                         symbol:
-                            type === "Stocks"
+                            type === "Stocks" || type === "ETF"
                                 ? symbol || undefined
                                 : undefined,
 
                         schemeCode:
                             type === "Mutual Funds"
-                                ? schemeCode
+                                ? schemeCode || undefined
                                 : undefined,
 
                         goldPurity:
                             type === "Gold"
-                                ? (goldPurity as "18K" | "22K" | "24K")
+                                ? (goldPurity as
+                                    | "18K"
+                                    | "22K"
+                                    | "24K")
+                                : undefined,
+
+                        cryptoId:
+                            type === "Crypto"
+                                ? cryptoId || undefined
+                                : undefined,
+
+                        cryptoSymbol:
+                            type === "Crypto"
+                                ? cryptoSymbol || undefined
+                                : undefined,
+
+                        bondFaceValue:
+                            type === "Bonds"
+                                ? bondFaceValue
+                                : undefined,
+
+                        bondCouponRate:
+                            type === "Bonds"
+                                ? bondCouponRate
+                                : undefined,
+
+                        bondMaturityDate:
+                            type === "Bonds"
+                                ? bondMaturityDate
+                                : undefined,
+
+                        bondInterestFrequency:
+                            type === "Bonds"
+                                ? bondInterestFrequency
                                 : undefined,
 
                         quantity,
                         averageBuyPrice: buyPrice,
-                        totalInvested: calculations.totalInvested,
+                        totalInvested:
+                            calculations.totalInvested,
+
                         currentPrice,
-                        currentValue: calculations.currentValue,
-                        profitLoss: calculations.profitLoss,
-                        returnPercentage: calculations.returnPercentage,
+
+                        currentValue:
+                            calculations.currentValue,
+
+                        profitLoss:
+                            calculations.profitLoss,
+
+                        returnPercentage:
+                            calculations.returnPercentage,
+
                         purchaseDate: parsedPurchaseDate,
                         notes: notes || undefined,
                         priceSource: "MANUAL",
@@ -262,21 +470,23 @@ export async function POST(request: NextRequest) {
 
             createdInvestment = investments[0];
 
-            const transactions = await InvestmentTransaction.create(
-                [
-                    {
-                        userId,
-                        investmentId: createdInvestment._id,
-                        type: "BUY",
-                        quantity,
-                        price: buyPrice,
-                        amount: calculations.totalInvested,
-                        date: parsedPurchaseDate,
-                        notes: notes || undefined,
-                    },
-                ],
-                { session }
-            );
+            const transactions =
+                await InvestmentTransaction.create(
+                    [
+                        {
+                            userId,
+                            investmentId:
+                                createdInvestment._id,
+                            type: "BUY",
+                            quantity,
+                            price: buyPrice,
+                            amount: calculations.totalInvested,
+                            date: parsedPurchaseDate,
+                            notes: notes || undefined,
+                        },
+                    ],
+                    { session }
+                );
 
             createdTransaction = transactions[0];
         });
@@ -290,7 +500,10 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
     } catch (error) {
-        console.error("POST /api/investments error:", error);
+        console.error(
+            "POST /api/investments error:",
+            error
+        );
 
         return NextResponse.json(
             {

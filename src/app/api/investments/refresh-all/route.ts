@@ -1,17 +1,8 @@
-import { NextResponse } from "next/server";
-import { headers } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
 import Investment from "@/models/Investment";
-
-async function getUserId() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  return session?.user?.id ?? null;
-}
 
 type RefreshResult = {
   success: boolean;
@@ -20,9 +11,33 @@ type RefreshResult = {
   message?: string;
 };
 
-export async function POST(request: Request) {
+async function getUserId(request: NextRequest) {
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+
+  return session?.user?.id ?? null;
+}
+
+async function readRefreshResponse(
+  response: Response
+): Promise<RefreshResult> {
+  const contentType =
+    response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return {
+      success: false,
+      message: `Refresh endpoint returned HTTP ${response.status}.`,
+    };
+  }
+
+  return response.json() as Promise<RefreshResult>;
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const userId = await getUserId();
+    const userId = await getUserId(request);
 
     if (!userId) {
       return NextResponse.json(
@@ -34,13 +49,29 @@ export async function POST(request: Request) {
       );
     }
 
+    const cookieHeader =
+      request.headers.get("cookie") ?? "";
+
+    if (!cookieHeader) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Your session cookie was not available. Please log in again.",
+        },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
 
     const investments = await Investment.find({
       userId,
       $or: [
         {
-          type: "Stocks",
+          type: {
+            $in: ["Stocks", "ETF"],
+          },
           symbol: {
             $exists: true,
             $nin: ["", null],
@@ -60,6 +91,13 @@ export async function POST(request: Request) {
             $nin: ["", null],
           },
         },
+        {
+          type: "Crypto",
+          cryptoId: {
+            $exists: true,
+            $nin: ["", null],
+          },
+        },
       ],
     });
 
@@ -68,12 +106,14 @@ export async function POST(request: Request) {
         success: true,
         updatedCount: 0,
         failedCount: 0,
+        skippedCount: 0,
         investments: [],
         failures: [],
       });
     }
 
     const origin = new URL(request.url).origin;
+
     const updatedInvestments: unknown[] = [];
     const failures: unknown[] = [];
 
@@ -89,26 +129,28 @@ export async function POST(request: Request) {
           {
             method: "POST",
             headers: {
-              cookie: request.headers.get("cookie") ?? "",
+              cookie: cookieHeader,
+              Accept: "application/json",
             },
             cache: "no-store",
           }
         );
 
         const refreshData =
-          (await refreshResponse.json()) as RefreshResult;
+          await readRefreshResponse(refreshResponse);
 
         if (!refreshResponse.ok || !refreshData.success) {
           failures.push({
             investmentId: investment._id.toString(),
             name: investment.name,
             type: investment.type,
-            symbol: investment.symbol,
-            schemeCode: investment.schemeCode,
-            goldPurity: investment.goldPurity,
+            symbol: investment.symbol || null,
+            schemeCode: investment.schemeCode || null,
+            goldPurity: investment.goldPurity || null,
+            cryptoId: investment.cryptoId || null,
             message:
               refreshData.message ||
-              "Unable to refresh investment",
+              "Unable to refresh investment price.",
           });
 
           continue;
@@ -119,7 +161,7 @@ export async function POST(request: Request) {
         );
       } catch (error) {
         console.error(
-          `Failed to refresh investment ${investment._id}:`,
+          `Failed to refresh investment ${investment._id.toString()}:`,
           error
         );
 
@@ -127,10 +169,14 @@ export async function POST(request: Request) {
           investmentId: investment._id.toString(),
           name: investment.name,
           type: investment.type,
-          symbol: investment.symbol,
-          schemeCode: investment.schemeCode,
-          goldPurity: investment.goldPurity,
-          message: "Unable to refresh this investment",
+          symbol: investment.symbol || null,
+          schemeCode: investment.schemeCode || null,
+          goldPurity: investment.goldPurity || null,
+          cryptoId: investment.cryptoId || null,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to refresh this investment.",
         });
       }
     }
@@ -139,6 +185,7 @@ export async function POST(request: Request) {
       success: true,
       updatedCount: updatedInvestments.length,
       failedCount: failures.length,
+      skippedCount: 0,
       investments: updatedInvestments,
       failures,
     });
@@ -148,7 +195,10 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        message: "Unable to refresh investments",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to refresh investments.",
       },
       { status: 500 }
     );

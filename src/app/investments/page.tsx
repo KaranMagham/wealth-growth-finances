@@ -44,9 +44,25 @@ interface InvestmentRecord {
   _id: string;
   name: string;
   type: InvestmentType;
+
   symbol?: string;
+
   schemeCode?: string;
+
   goldPurity?: GoldPurity;
+
+  cryptoId?: string;
+  cryptoSymbol?: string;
+
+  bondFaceValue?: number;
+  bondCouponRate?: number;
+  bondMaturityDate?: string;
+  bondInterestFrequency?:
+  | "Monthly"
+  | "Quarterly"
+  | "Half-yearly"
+  | "Yearly";
+
   quantity: number;
   averageBuyPrice: number;
   currentPrice: number;
@@ -54,9 +70,11 @@ interface InvestmentRecord {
   totalInvested: number;
   profitLoss: number;
   returnPercentage: number;
+
   purchaseDate: string;
   notes?: string;
   createdAt?: string;
+
   priceSource?: "MANUAL" | "MARKET_API";
   priceUpdatedAt?: string;
 }
@@ -89,6 +107,16 @@ interface InvestmentForm {
   symbol: string;
   schemeCode: string;
   goldPurity: GoldPurity;
+  cryptoId: string;
+  cryptoSymbol: string;
+  bondFaceValue: string;
+  bondCouponRate: string;
+  bondMaturityDate: string;
+  bondInterestFrequency:
+  | "Monthly"
+  | "Quarterly"
+  | "Half-yearly"
+  | "Yearly";
   quantity: string;
   buyPrice: string;
   currentPrice: string;
@@ -104,9 +132,19 @@ function createInitialForm(): InvestmentForm {
   return {
     name: "",
     type: "Stocks",
+
     symbol: "",
     schemeCode: "",
     goldPurity: "24K",
+
+    cryptoId: "",
+    cryptoSymbol: "",
+
+    bondFaceValue: "",
+    bondCouponRate: "",
+    bondMaturityDate: "",
+    bondInterestFrequency: "Yearly",
+
     quantity: "",
     buyPrice: "",
     currentPrice: "",
@@ -139,8 +177,13 @@ function formatDate(value?: string) {
   });
 }
 
-function getIdentifier(investment: InvestmentRecord) {
-  if (investment.type === "Stocks") {
+function getIdentifier(
+  investment: InvestmentRecord
+) {
+  if (
+    investment.type === "Stocks" ||
+    investment.type === "ETF"
+  ) {
     return investment.symbol || "No symbol";
   }
 
@@ -150,6 +193,14 @@ function getIdentifier(investment: InvestmentRecord) {
 
   if (investment.type === "Gold") {
     return investment.goldPurity || "No purity";
+  }
+
+  if (investment.type === "Crypto") {
+    return (
+      investment.cryptoSymbol ||
+      investment.cryptoId ||
+      "No coin ID"
+    );
   }
 
   return "Manual price";
@@ -200,6 +251,89 @@ export default function InvestmentsPage() {
       [field]: value,
     }));
   };
+
+  const fetchMutualFundQuote = useCallback(async () => {
+    const schemeCode = form.schemeCode.trim();
+
+    if (!/^\d+$/.test(schemeCode)) {
+      setQuoteMessage(
+        "Enter a valid numeric scheme code first."
+      );
+      return;
+    }
+
+    try {
+      setIsLoadingQuote(true);
+      setQuoteMessage("");
+
+      const response = await fetch(
+        `/api/market/mutual-funds/quote?schemeCode=${encodeURIComponent(
+          schemeCode
+        )}`,
+        {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        }
+      );
+
+      const data = await readJson<{
+        success: boolean;
+        message?: string;
+        quote?: {
+          price?: number;
+          nav?: number;
+          date?: string | null;
+          schemeName?: string | null;
+        };
+      }>(response);
+
+      if (!response.ok || !data.success) {
+        setQuoteMessage(
+          data.message || "Unable to load mutual fund NAV."
+        );
+        return;
+      }
+
+      const nav = Number(
+        data.quote?.nav ?? data.quote?.price
+      );
+
+      if (!Number.isFinite(nav) || nav <= 0) {
+        setQuoteMessage("Invalid NAV received.");
+        return;
+      }
+
+      setForm((current) => ({
+        ...current,
+        currentPrice: nav.toFixed(4),
+        name:
+          current.name.trim() ||
+          data.quote?.schemeName ||
+          current.name,
+      }));
+
+      setQuoteMessage(
+        `NAV updated: ${formatCurrency(nav)}${data.quote?.date
+          ? ` · ${data.quote.date}`
+          : ""
+        }`
+      );
+    } catch (error) {
+      console.error(
+        "Mutual fund quote error:",
+        error
+      );
+
+      setQuoteMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to fetch mutual fund NAV."
+      );
+    } finally {
+      setIsLoadingQuote(false);
+    }
+  }, [form.schemeCode]);
 
   const fetchInvestments = useCallback(async () => {
     try {
@@ -304,19 +438,19 @@ export default function InvestmentsPage() {
   }, [status, router, reloadInvestmentData]);
 
   async function readJson<T>(response: Response): Promise<T> {
-  const contentType =
-    response.headers.get("content-type") || "";
+    const contentType =
+      response.headers.get("content-type") || "";
 
-  if (!contentType.includes("application/json")) {
-    const text = await response.text();
+    if (!contentType.includes("application/json")) {
+      const text = await response.text();
 
-    throw new Error(
-      `Expected JSON but received ${response.status}.`
-    );
+      throw new Error(
+        `Expected JSON but received ${response.status}.`
+      );
+    }
+
+    return response.json() as Promise<T>;
   }
-
-  return response.json() as Promise<T>;
-}
 
   const localSummary = useMemo(() => {
     const summary = investments.reduce(
@@ -347,8 +481,8 @@ export default function InvestmentsPage() {
       returnPercentage:
         summary.totalInvested > 0
           ? (summary.profitLoss /
-              summary.totalInvested) *
-            100
+            summary.totalInvested) *
+          100
           : 0,
     };
   }, [investments]);
@@ -367,6 +501,8 @@ export default function InvestmentsPage() {
           investment.symbol,
           investment.schemeCode,
           investment.goldPurity,
+          investment.cryptoId,
+          investment.cryptoSymbol,
         ]
           .filter(Boolean)
           .join(" ")
@@ -478,15 +614,15 @@ export default function InvestmentsPage() {
       );
 
       const data = await readJson<{
-  success: boolean;
-  message?: string;
-  quote?: {
-    price?: number;
-    purity?: string;
-    currency?: string;
-    unit?: string;
-  };
-}>(response);
+        success: boolean;
+        message?: string;
+        quote?: {
+          price?: number;
+          purity?: string;
+          currency?: string;
+          unit?: string;
+        };
+      }>(response);
 
       if (!response.ok || !data.success) {
         setQuoteMessage(
@@ -520,6 +656,65 @@ export default function InvestmentsPage() {
     }
   }, [form.type, form.goldPurity]);
 
+  const fetchCryptoQuote = useCallback(async () => {
+    const coinId = form.cryptoId.trim().toLowerCase();
+
+    if (!coinId) {
+      setQuoteMessage("Enter a crypto coin ID first.");
+      return;
+    }
+
+    try {
+      setIsLoadingQuote(true);
+      setQuoteMessage("");
+
+      const response = await fetch(
+        `/api/market/crypto/quote?coinId=${encodeURIComponent(
+          coinId
+        )}`,
+        {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setQuoteMessage(
+          data.message || "Unable to load crypto price."
+        );
+        return;
+      }
+
+      const price = Number(data.quote?.price);
+
+      if (!Number.isFinite(price) || price <= 0) {
+        setQuoteMessage("Invalid crypto price received.");
+        return;
+      }
+
+      setForm((current) => ({
+        ...current,
+        cryptoId: coinId,
+        currentPrice: price.toFixed(2),
+      }));
+
+      setQuoteMessage(
+        `Crypto price updated: ${formatCurrency(price)}`
+      );
+    } catch (error) {
+      console.error("Crypto quote error:", error);
+      setQuoteMessage("Unable to fetch crypto price.");
+    } finally {
+      setIsLoadingQuote(false);
+    }
+  }, [form.cryptoId]);
+
   const handleTypeChange = (
     type: InvestmentType
   ) => {
@@ -543,9 +738,31 @@ export default function InvestmentsPage() {
     setForm({
       name: investment.name,
       type: investment.type,
+
       symbol: investment.symbol || "",
       schemeCode: investment.schemeCode || "",
       goldPurity: investment.goldPurity || "24K",
+
+      cryptoId: investment.cryptoId || "",
+      cryptoSymbol: investment.cryptoSymbol || "",
+
+      bondFaceValue:
+        investment.bondFaceValue !== undefined
+          ? String(investment.bondFaceValue)
+          : "",
+
+      bondCouponRate:
+        investment.bondCouponRate !== undefined
+          ? String(investment.bondCouponRate)
+          : "",
+
+      bondMaturityDate: investment.bondMaturityDate
+        ? investment.bondMaturityDate.slice(0, 10)
+        : "",
+
+      bondInterestFrequency:
+        investment.bondInterestFrequency || "Yearly",
+
       quantity: String(investment.quantity),
       buyPrice: String(investment.averageBuyPrice),
       currentPrice: String(investment.currentPrice),
@@ -608,11 +825,21 @@ export default function InvestmentsPage() {
       return;
     }
 
+    if (!form.purchaseDate) {
+      setMessage("Select a purchase date.");
+      return;
+    }
+
     if (
-      form.type === "Stocks" &&
+      (form.type === "Stocks" ||
+        form.type === "ETF") &&
       !form.symbol.trim()
     ) {
-      setMessage("Enter a stock symbol.");
+      setMessage(
+        form.type === "ETF"
+          ? "Enter an ETF ticker."
+          : "Enter a stock symbol."
+      );
       return;
     }
 
@@ -620,7 +847,9 @@ export default function InvestmentsPage() {
       form.type === "Mutual Funds" &&
       !/^\d+$/.test(form.schemeCode.trim())
     ) {
-      setMessage("Enter a valid scheme code.");
+      setMessage(
+        "Enter a valid mutual fund scheme code."
+      );
       return;
     }
 
@@ -634,24 +863,129 @@ export default function InvestmentsPage() {
       return;
     }
 
+    if (
+      form.type === "Crypto" &&
+      !form.cryptoId.trim()
+    ) {
+      setMessage("Enter a CoinGecko coin ID.");
+      return;
+    }
+
+    if (
+      form.type === "Crypto" &&
+      !form.cryptoSymbol.trim()
+    ) {
+      setMessage("Enter a crypto symbol.");
+      return;
+    }
+
+    if (form.type === "Bonds") {
+      const bondFaceValue = Number(
+        form.bondFaceValue
+      );
+
+      const bondCouponRate = Number(
+        form.bondCouponRate
+      );
+
+      if (
+        !Number.isFinite(bondFaceValue) ||
+        bondFaceValue <= 0
+      ) {
+        setMessage(
+          "Enter a valid bond face value."
+        );
+        return;
+      }
+
+      if (
+        !Number.isFinite(bondCouponRate) ||
+        bondCouponRate < 0
+      ) {
+        setMessage(
+          "Enter a valid bond coupon rate."
+        );
+        return;
+      }
+
+      if (!form.bondMaturityDate) {
+        setMessage("Select the bond maturity date.");
+        return;
+      }
+
+      const purchaseDate = new Date(
+        form.purchaseDate
+      );
+
+      const maturityDate = new Date(
+        form.bondMaturityDate
+      );
+
+      if (
+        Number.isNaN(purchaseDate.getTime()) ||
+        Number.isNaN(maturityDate.getTime()) ||
+        maturityDate <= purchaseDate
+      ) {
+        setMessage(
+          "Bond maturity date must be after purchase date."
+        );
+        return;
+      }
+    }
+
     try {
       setIsSaving(true);
 
       const payload = {
         name: form.name.trim(),
         type: form.type,
+
         symbol:
-          form.type === "Stocks"
+          form.type === "Stocks" ||
+            form.type === "ETF"
             ? form.symbol.trim().toUpperCase()
             : undefined,
+
         schemeCode:
           form.type === "Mutual Funds"
             ? form.schemeCode.trim()
             : undefined,
+
         goldPurity:
           form.type === "Gold"
             ? form.goldPurity
             : undefined,
+
+        cryptoId:
+          form.type === "Crypto"
+            ? form.cryptoId.trim().toLowerCase()
+            : undefined,
+
+        cryptoSymbol:
+          form.type === "Crypto"
+            ? form.cryptoSymbol.trim().toUpperCase()
+            : undefined,
+
+        bondFaceValue:
+          form.type === "Bonds"
+            ? Number(form.bondFaceValue)
+            : undefined,
+
+        bondCouponRate:
+          form.type === "Bonds"
+            ? Number(form.bondCouponRate)
+            : undefined,
+
+        bondMaturityDate:
+          form.type === "Bonds"
+            ? form.bondMaturityDate
+            : undefined,
+
+        bondInterestFrequency:
+          form.type === "Bonds"
+            ? form.bondInterestFrequency
+            : undefined,
+
         quantity,
         buyPrice,
         currentPrice,
@@ -671,6 +1005,15 @@ export default function InvestmentsPage() {
         credentials: "include",
         body: JSON.stringify(payload),
       });
+
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error(
+          `Server returned ${response.status} instead of JSON.`
+        );
+      }
 
       const data = await response.json();
 
@@ -696,7 +1039,12 @@ export default function InvestmentsPage() {
       await reloadInvestmentData();
     } catch (error) {
       console.error("Save investment error:", error);
-      setMessage("Unable to save investment.");
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to save investment."
+      );
     } finally {
       setIsSaving(false);
     }
@@ -757,6 +1105,10 @@ export default function InvestmentsPage() {
         {
           method: "POST",
           credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
         }
       );
 
@@ -765,7 +1117,7 @@ export default function InvestmentsPage() {
       if (!response.ok || !data.success) {
         setMessage(
           data.message ||
-            "Unable to refresh investment prices."
+          "Unable to refresh investment prices."
         );
         return;
       }
@@ -838,9 +1190,8 @@ export default function InvestmentsPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-[#10B981]/40 px-4 py-2.5 text-sm font-semibold text-[#D4F2D3] hover:bg-[#10B981]/10 disabled:opacity-60"
               >
                 <RefreshCw
-                  className={`h-4 w-4 ${
-                    isRefreshing ? "animate-spin" : ""
-                  }`}
+                  className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""
+                    }`}
                 />
 
                 {isRefreshing
@@ -1037,16 +1388,47 @@ export default function InvestmentsPage() {
                 )}
 
                 {form.type === "Mutual Funds" && (
-                  <FormInput
-                    label="Scheme code"
-                    value={form.schemeCode}
-                    onChange={(value) =>
-                      updateForm("schemeCode", value)
-                    }
-                    placeholder="125497"
-                    inputMode="numeric"
-                    required
-                  />
+                  <div className="text-sm text-[#E2E8F0]">
+                    <span className="mb-2 block">
+                      Mutual fund scheme code
+                    </span>
+
+                    <div className="flex gap-2">
+                      <input
+                        value={form.schemeCode}
+                        onChange={(event) =>
+                          updateForm(
+                            "schemeCode",
+                            event.target.value.replace(/\D/g, "")
+                          )
+                        }
+                        placeholder="125497"
+                        inputMode="numeric"
+                        required
+                        className="min-w-0 flex-1 rounded-xl border border-[#334155] bg-[#111827] px-3 py-2 text-white outline-none focus:border-[#10B981]"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => void fetchMutualFundQuote()}
+                        disabled={
+                          isLoadingQuote ||
+                          !form.schemeCode.trim()
+                        }
+                        className="shrink-0 rounded-xl border border-[#10B981]/40 px-3 py-2 text-xs font-semibold text-[#D4F2D3] hover:bg-[#10B981]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isLoadingQuote
+                          ? "Loading..."
+                          : "Get NAV"}
+                      </button>
+                    </div>
+
+                    {quoteMessage && (
+                      <p className="mt-2 text-xs text-[#94A3B8]">
+                        {quoteMessage}
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {form.type === "Gold" && (
@@ -1092,6 +1474,140 @@ export default function InvestmentsPage() {
                       </p>
                     )}
                   </div>
+                )}
+
+                {form.type === "ETF" && (
+                  <IdentifierField
+                    label="ETF ticker"
+                    value={form.symbol}
+                    placeholder="SPY"
+                    buttonText={
+                      isLoadingQuote ? "Loading..." : "Get price"
+                    }
+                    disabled={
+                      isLoadingQuote || !form.symbol.trim()
+                    }
+                    onChange={(value) =>
+                      updateForm("symbol", value.toUpperCase())
+                    }
+                    onAction={() => void fetchStockQuote()}
+                    message={quoteMessage}
+                  />
+                )}
+
+                {form.type === "Bonds" && (
+                  <>
+                    <FormInput
+                      label="Face value per bond"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.bondFaceValue}
+                      onChange={(value) =>
+                        updateForm("bondFaceValue", value)
+                      }
+                      placeholder="1000"
+                      required
+                    />
+
+                    <FormInput
+                      label="Coupon rate (%)"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.bondCouponRate}
+                      onChange={(value) =>
+                        updateForm("bondCouponRate", value)
+                      }
+                      placeholder="7.25"
+                      required
+                    />
+
+                    <FormInput
+                      label="Maturity date"
+                      type="date"
+                      value={form.bondMaturityDate}
+                      onChange={(value) =>
+                        updateForm("bondMaturityDate", value)
+                      }
+                      required
+                    />
+
+                    <FormSelect
+                      label="Interest frequency"
+                      value={form.bondInterestFrequency}
+                      onChange={(value) =>
+                        updateForm(
+                          "bondInterestFrequency",
+                          value as InvestmentForm["bondInterestFrequency"]
+                        )
+                      }
+                      options={[
+                        "Monthly",
+                        "Quarterly",
+                        "Half-yearly",
+                        "Yearly",
+                      ]}
+                    />
+                  </>
+                )}
+
+                {form.type === "Crypto" && (
+                  <>
+                    <FormInput
+                      label="CoinGecko ID"
+                      value={form.cryptoId}
+                      onChange={(value) =>
+                        updateForm(
+                          "cryptoId",
+                          value.toLowerCase().trim()
+                        )
+                      }
+                      placeholder="bitcoin"
+                      required
+                    />
+
+                    <div className="text-sm text-[#E2E8F0]">
+                      <span className="mb-2 block">
+                        Crypto symbol
+                      </span>
+
+                      <div className="flex gap-2">
+                        <input
+                          value={form.cryptoSymbol}
+                          onChange={(event) =>
+                            updateForm(
+                              "cryptoSymbol",
+                              event.target.value.toUpperCase()
+                            )
+                          }
+                          placeholder="BTC"
+                          required
+                          className="min-w-0 flex-1 rounded-xl border border-[#334155] bg-[#111827] px-3 py-2 uppercase text-white outline-none focus:border-[#10B981]"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => void fetchCryptoQuote()}
+                          disabled={
+                            isLoadingQuote ||
+                            !form.cryptoId.trim()
+                          }
+                          className="rounded-xl border border-[#10B981]/40 px-3 py-2 text-xs font-semibold text-[#D4F2D3] hover:bg-[#10B981]/10 disabled:opacity-50"
+                        >
+                          {isLoadingQuote
+                            ? "Loading..."
+                            : "Get price"}
+                        </button>
+                      </div>
+
+                      {quoteMessage && (
+                        <p className="mt-2 text-xs text-[#94A3B8]">
+                          {quoteMessage}
+                        </p>
+                      )}
+                    </div>
+                  </>
                 )}
 
                 <FormInput
@@ -1327,11 +1843,10 @@ export default function InvestmentsPage() {
                             </td>
 
                             <td
-                              className={`px-4 py-3 font-semibold ${
-                                investment.profitLoss >= 0
-                                  ? "text-[#10B981]"
-                                  : "text-rose-400"
-                              }`}
+                              className={`px-4 py-3 font-semibold ${investment.profitLoss >= 0
+                                ? "text-[#10B981]"
+                                : "text-rose-400"
+                                }`}
                             >
                               {investment.profitLoss >= 0
                                 ? "+"
@@ -1344,8 +1859,8 @@ export default function InvestmentsPage() {
                             <td className="px-4 py-3 text-xs text-[#94A3B8]">
                               {investment.priceUpdatedAt
                                 ? formatDate(
-                                    investment.priceUpdatedAt
-                                  )
+                                  investment.priceUpdatedAt
+                                )
                                 : "Manual"}
                             </td>
 
