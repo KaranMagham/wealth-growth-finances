@@ -41,6 +41,7 @@ const Navbar = () => {
       { href: "/budgets", label: "Budgets" },
       { href: "/goals", label: "Goals" },
       { href: "/investments", label: "Assets" },
+      { href: "/analysis", label: "Analysis & Reports" },
       { href: "/contact", label: "Help Center" },
     ]
     : [
@@ -131,7 +132,7 @@ const Navbar = () => {
                       { href: "/budgets", label: "Budgets" },
                       { href: "/goals", label: "Goals" },
                       { href: "/investments", label: "Assets" },
-                      { href: "/reports", label: "Reports" },
+                      { href: "/analysis", label: "Analysis & Reports" },
                     ].map((link) => (
                       <Link
                         key={link.href}
