@@ -7,16 +7,25 @@ import Investment from "@/models/Investment";
 import type {
   AnalysisPeriod,
   AnalysisResponse,
+  BudgetAnalysisItem,
+  GoalAnalysisItem,
   IncomeExpenseTrendItem,
+  InvestmentAnalysisItem,
   InvestmentDistributionItem,
+  TransactionAnalysisItem,
 } from "./analysisTypes";
+
 import { getMonthsInPeriod } from "./getAnalysisPeriod";
 
 type TransactionRecord = {
+  _id?: unknown;
   type: "Income" | "Expense";
   amount: number;
-  category: string;
-  date: Date;
+  category?: string;
+  description?: string;
+  merchant?: string;
+  title?: string;
+  date: Date | string;
 };
 
 type BudgetRecord = {
@@ -27,13 +36,25 @@ type BudgetRecord = {
 };
 
 type GoalRecord = {
+  _id?: unknown;
+  name?: string;
+  title?: string;
   targetAmount: number;
-  currentAmount: number;
+  currentAmount?: number;
+  savedAmount?: number;
+  deadline?: Date | string;
   completed: boolean;
 };
 
 type InvestmentRecord = {
+  _id?: unknown;
+  name?: string;
   type: string;
+  symbol?: string;
+  quantity?: number;
+  averageBuyPrice?: number;
+  currentPrice?: number;
+  purchaseDate?: Date | string;
   totalInvested: number;
   currentValue: number;
   profitLoss: number;
@@ -43,12 +64,55 @@ function round(value: number) {
   return Number(value.toFixed(2));
 }
 
-function getMonthKey(date: Date) {
-  const value = new Date(date);
+function toDate(value: Date | string | undefined) {
+  if (!value) {
+    return new Date(0);
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? new Date(0)
+    : date;
+}
+
+function toId(value: unknown, fallback: string) {
+  return value ? String(value) : fallback;
+}
+
+function formatDate(value: Date | string) {
+  return toDate(value).toISOString();
+}
+
+function getMonthKey(date: Date | string) {
+  const value = toDate(date);
 
   return `${value.getUTCFullYear()}-${String(
     value.getUTCMonth() + 1
   ).padStart(2, "0")}`;
+}
+
+function getDayDifference(
+  start: Date,
+  end: Date
+) {
+  const milliseconds =
+    end.getTime() - start.getTime();
+
+  return Math.max(
+    1,
+    Math.ceil(milliseconds / 86400000)
+  );
+}
+
+function getMerchant(transaction: TransactionRecord) {
+  return (
+    transaction.merchant?.trim() ||
+    transaction.description?.trim() ||
+    transaction.title?.trim() ||
+    transaction.category?.trim() ||
+    "Unknown"
+  );
 }
 
 export async function getAnalysisData(
@@ -76,7 +140,9 @@ export async function getAnalysisData(
         $gte: period.start,
         $lt: period.endExclusive,
       },
-    }).lean(),
+    })
+      .sort({ date: -1 })
+      .lean(),
 
     Budget.find({
       userId,
@@ -98,7 +164,8 @@ export async function getAnalysisData(
   const budgets =
     budgetDocuments as unknown as BudgetRecord[];
 
-  const goals = goalDocuments as unknown as GoalRecord[];
+  const goals =
+    goalDocuments as unknown as GoalRecord[];
 
   const investments =
     investmentDocuments as unknown as InvestmentRecord[];
@@ -106,7 +173,22 @@ export async function getAnalysisData(
   let income = 0;
   let expenses = 0;
 
-  const expenseByCategory = new Map<string, number>();
+  let incomeTransactionCount = 0;
+  let expenseTransactionCount = 0;
+
+  const expenseByCategory = new Map<
+    string,
+    number
+  >();
+
+  const incomeBySource = new Map<
+    string,
+    {
+      amount: number;
+      occurrenceCount: number;
+    }
+  >();
+
   const trendByMonth = new Map<
     string,
     IncomeExpenseTrendItem
@@ -121,14 +203,56 @@ export async function getAnalysisData(
     });
   }
 
+  const transactionItems: TransactionAnalysisItem[] =
+    transactions.map((transaction, index) => {
+      const type = transaction.type;
+      const category =
+        transaction.category?.trim() ||
+        "Uncategorized";
+      const merchant = getMerchant(transaction);
+
+      return {
+        id: toId(
+          transaction._id,
+          `${type}-${index}`
+        ),
+        type,
+        amount: round(
+          Number(transaction.amount) || 0
+        ),
+        category,
+        description:
+          transaction.description?.trim() ||
+          transaction.title?.trim() ||
+          "",
+        merchant,
+        date: formatDate(transaction.date),
+      };
+    });
+
   for (const transaction of transactions) {
     const amount = Number(transaction.amount) || 0;
     const monthKey = getMonthKey(transaction.date);
-
     const trend = trendByMonth.get(monthKey);
 
     if (transaction.type === "Income") {
       income += amount;
+      incomeTransactionCount += 1;
+
+      const source =
+        transaction.category?.trim() ||
+        transaction.description?.trim() ||
+        transaction.title?.trim() ||
+        "Other income";
+
+      const current = incomeBySource.get(source) || {
+        amount: 0,
+        occurrenceCount: 0,
+      };
+
+      current.amount += amount;
+      current.occurrenceCount += 1;
+      incomeBySource.set(source, current);
 
       if (trend) {
         trend.income += amount;
@@ -139,10 +263,15 @@ export async function getAnalysisData(
 
     if (transaction.type === "Expense") {
       expenses += amount;
+      expenseTransactionCount += 1;
+
+      const category =
+        transaction.category?.trim() ||
+        "Uncategorized";
 
       expenseByCategory.set(
-        transaction.category,
-        (expenseByCategory.get(transaction.category) || 0) +
+        category,
+        (expenseByCategory.get(category) || 0) +
           amount
       );
 
@@ -157,7 +286,9 @@ export async function getAnalysisData(
   const savingsRate =
     income > 0 ? (savings / income) * 100 : 0;
 
-  const expenseBreakdown = [...expenseByCategory.entries()]
+  const expenseBreakdown = [
+    ...expenseByCategory.entries(),
+  ]
     .map(([category, amount]) => ({
       category,
       amount: round(amount),
@@ -175,7 +306,9 @@ export async function getAnalysisData(
       ...trend,
       income: round(trend.income),
       expenses: round(trend.expenses),
-      savings: round(trend.income - trend.expenses),
+      savings: round(
+        trend.income - trend.expenses
+      ),
     };
   });
 
@@ -186,18 +319,150 @@ export async function getAnalysisData(
     })
   );
 
+  const periodDays = getDayDifference(
+    period.start,
+    period.endExclusive
+  );
+
+  const averageDailySpending =
+    expenses / periodDays;
+
+  const averageWeeklySpending =
+    expenses / Math.max(1, periodDays / 7);
+
+  const averageMonthlySpending =
+    expenses /
+    Math.max(1, months.length);
+
+  const sortedExpenses = transactionItems
+    .filter(
+      (transaction) =>
+        transaction.type === "Expense"
+    )
+    .sort((a, b) => b.amount - a.amount);
+
+  const biggestExpenses = sortedExpenses.slice(
+    0,
+    10
+  );
+
+  const recurringMap = new Map<
+    string,
+    {
+      category: string;
+      merchant: string;
+      amount: number;
+      occurrenceCount: number;
+      lastDate: string;
+    }
+  >();
+
+  for (const transaction of sortedExpenses) {
+    const key = `${transaction.category}:${transaction.merchant}`;
+
+    const current = recurringMap.get(key);
+
+    if (!current) {
+      recurringMap.set(key, {
+        category: transaction.category,
+        merchant: transaction.merchant,
+        amount: transaction.amount,
+        occurrenceCount: 1,
+        lastDate: transaction.date,
+      });
+
+      continue;
+    }
+
+    current.amount += transaction.amount;
+    current.occurrenceCount += 1;
+
+    if (
+      new Date(transaction.date).getTime() >
+      new Date(current.lastDate).getTime()
+    ) {
+      current.lastDate = transaction.date;
+    }
+  }
+
+  const recurringExpenses = [
+    ...recurringMap.values(),
+  ]
+    .filter((item) => item.occurrenceCount >= 2)
+    .map((item) => ({
+      ...item,
+      amount: round(item.amount),
+      averageAmount: round(
+        item.amount / item.occurrenceCount
+      ),
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const incomeSources = [
+    ...incomeBySource.entries(),
+  ]
+    .map(([source, value]) => ({
+      source,
+      amount: round(value.amount),
+      occurrenceCount: value.occurrenceCount,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
   const budgetedAmount = budgets.reduce(
-    (total, budget) => total + (Number(budget.limit) || 0),
+    (total, budget) =>
+      total + (Number(budget.limit) || 0),
     0
   );
 
-  const budgetCategories = new Set(
-    budgets.map((budget) => budget.category)
+  const budgetUsed = budgets.reduce(
+    (total, budget) => {
+      const categorySpent =
+        expenseByCategory.get(budget.category) ||
+        0;
+
+      return total + categorySpent;
+    },
+    0
   );
 
-  const budgetUsed = [...expenseByCategory.entries()]
-    .filter(([category]) => budgetCategories.has(category))
-    .reduce((total, [, amount]) => total + amount, 0);
+  const budgetBreakdown: BudgetAnalysisItem[] =
+  budgets
+    .map((budget): BudgetAnalysisItem => {
+        const limit =
+          Number(budget.limit) || 0;
+
+        const spent =
+          expenseByCategory.get(budget.category) ||
+          0;
+
+        const remaining = limit - spent;
+
+        const usagePercentage =
+          limit > 0 ? (spent / limit) * 100 : 0;
+
+        const status =
+          usagePercentage >= 100
+            ? "exceeded"
+            : usagePercentage >= 80
+              ? "nearly_exhausted"
+              : "under_budget";
+
+        return {
+          category: budget.category,
+          limit: round(limit),
+          spent: round(spent),
+          remaining: round(remaining),
+          usagePercentage: round(
+            usagePercentage
+          ),
+          status,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.usagePercentage -
+          a.usagePercentage
+      );
 
   const goalsSummary = goals.reduce(
     (result, goal) => ({
@@ -210,7 +475,10 @@ export async function getAnalysisData(
         (Number(goal.targetAmount) || 0),
       savedAmount:
         result.savedAmount +
-        (Number(goal.currentAmount) || 0),
+        (Number(
+          goal.currentAmount ??
+            goal.savedAmount
+        ) || 0),
     }),
     {
       totalGoals: 0,
@@ -220,33 +488,133 @@ export async function getAnalysisData(
     }
   );
 
+  const goalItems: GoalAnalysisItem[] = goals.map(
+    (goal, index) => {
+      const targetAmount =
+        Number(goal.targetAmount) || 0;
+
+      const currentAmount =
+        Number(
+          goal.currentAmount ??
+            goal.savedAmount
+        ) || 0;
+
+      const remainingAmount = Math.max(
+        0,
+        targetAmount - currentAmount
+      );
+
+      const progressPercentage =
+        targetAmount > 0
+          ? Math.min(
+              100,
+              (currentAmount / targetAmount) *
+                100
+            )
+          : 0;
+
+      return {
+        id: toId(
+          goal._id,
+          `goal-${index}`
+        ),
+        name:
+          goal.name?.trim() ||
+          goal.title?.trim() ||
+          "Unnamed goal",
+        targetAmount: round(targetAmount),
+        currentAmount: round(currentAmount),
+        remainingAmount: round(
+          remainingAmount
+        ),
+        progressPercentage: round(
+          progressPercentage
+        ),
+        deadline: goal.deadline
+          ? formatDate(goal.deadline)
+          : undefined,
+        completed: Boolean(goal.completed),
+      };
+    }
+  );
+
   const overallProgress =
     goalsSummary.targetAmount > 0
       ? Math.min(
+          100,
           (goalsSummary.savedAmount /
             goalsSummary.targetAmount) *
-            100,
-          100
+            100
         )
       : 0;
 
   const totalInvested = investments.reduce(
     (total, investment) =>
-      total + (Number(investment.totalInvested) || 0),
+      total +
+      (Number(investment.totalInvested) || 0),
     0
   );
 
   const investmentValue = investments.reduce(
     (total, investment) =>
-      total + (Number(investment.currentValue) || 0),
+      total +
+      (Number(investment.currentValue) || 0),
     0
   );
 
-  const investmentProfitLoss = investments.reduce(
-    (total, investment) =>
-      total + (Number(investment.profitLoss) || 0),
-    0
-  );
+  const investmentProfitLoss =
+    investments.reduce(
+      (total, investment) =>
+        total +
+        (Number(investment.profitLoss) || 0),
+      0
+    );
+
+  const investmentItems: InvestmentAnalysisItem[] =
+    investments.map((investment, index) => {
+      const invested =
+        Number(investment.totalInvested) || 0;
+
+      const currentValue =
+        Number(investment.currentValue) || 0;
+
+      const profitLoss =
+        Number(investment.profitLoss) || 0;
+
+      return {
+        id: toId(
+          investment._id,
+          `investment-${index}`
+        ),
+        name:
+          investment.name?.trim() ||
+          "Unnamed investment",
+        type: investment.type,
+        symbol: investment.symbol,
+        quantity:
+          Number(investment.quantity) || 0,
+        averageBuyPrice:
+          Number(
+            investment.averageBuyPrice
+          ) || 0,
+        currentPrice:
+          Number(investment.currentPrice) || 0,
+        totalInvested: round(invested),
+        currentValue: round(currentValue),
+        profitLoss: round(profitLoss),
+        returnPercentage:
+          invested > 0
+            ? round(
+                (profitLoss / invested) * 100
+              )
+            : 0,
+        purchaseDate: investment.purchaseDate
+          ? formatDate(
+              investment.purchaseDate
+            )
+          : undefined,
+      };
+    });
 
   const investmentByType = new Map<
     string,
@@ -258,11 +626,14 @@ export async function getAnalysisData(
   >();
 
   for (const investment of investments) {
-    const current = investmentByType.get(investment.type) || {
-      amount: 0,
-      investedAmount: 0,
-      profitLoss: 0,
-    };
+    const current =
+      investmentByType.get(
+        investment.type
+      ) || {
+        amount: 0,
+        investedAmount: 0,
+        profitLoss: 0,
+      };
 
     current.amount +=
       Number(investment.currentValue) || 0;
@@ -273,7 +644,10 @@ export async function getAnalysisData(
     current.profitLoss +=
       Number(investment.profitLoss) || 0;
 
-    investmentByType.set(investment.type, current);
+    investmentByType.set(
+      investment.type,
+      current
+    );
   }
 
   const investmentDistribution: InvestmentDistributionItem[] =
@@ -281,12 +655,18 @@ export async function getAnalysisData(
       .map(([type, values]) => ({
         type,
         amount: round(values.amount),
-        investedAmount: round(values.investedAmount),
-        profitLoss: round(values.profitLoss),
+        investedAmount: round(
+          values.investedAmount
+        ),
+        profitLoss: round(
+          values.profitLoss
+        ),
         percentage:
           investmentValue > 0
             ? round(
-                (values.amount / investmentValue) * 100
+                (values.amount /
+                  investmentValue) *
+                  100
               )
             : 0,
       }))
@@ -294,7 +674,17 @@ export async function getAnalysisData(
 
   const investmentReturnPercentage =
     totalInvested > 0
-      ? (investmentProfitLoss / totalInvested) * 100
+      ? (investmentProfitLoss /
+          totalInvested) *
+        100
+      : 0;
+
+  const budgetRemaining =
+    budgetedAmount - budgetUsed;
+
+  const budgetUsagePercentage =
+    budgetedAmount > 0
+      ? (budgetUsed / budgetedAmount) * 100
       : 0;
 
   return {
@@ -313,20 +703,56 @@ export async function getAnalysisData(
       savings: round(savings),
       savingsRate: round(savingsRate),
 
-      budgetedAmount: round(budgetedAmount),
+      budgetedAmount: round(
+        budgetedAmount
+      ),
       budgetUsed: round(budgetUsed),
+      budgetRemaining: round(
+        budgetRemaining
+      ),
+      budgetUsagePercentage: round(
+        budgetUsagePercentage
+      ),
 
       currentNetWorth: null,
 
-      investmentValue: round(investmentValue),
+      investmentValue: round(
+        investmentValue
+      ),
       totalInvested: round(totalInvested),
-      investmentProfitLoss: round(investmentProfitLoss),
+      investmentProfitLoss: round(
+        investmentProfitLoss
+      ),
       investmentReturnPercentage: round(
         investmentReturnPercentage
+      ),
+
+      transactionCount: transactions.length,
+      expenseTransactionCount,
+      incomeTransactionCount,
+
+      averageDailySpending: round(
+        averageDailySpending
+      ),
+      averageWeeklySpending: round(
+        averageWeeklySpending
+      ),
+      averageMonthlySpending: round(
+        averageMonthlySpending
       ),
     },
 
     expenseBreakdown,
+
+    transactions: transactionItems,
+
+    biggestExpenses,
+
+    recurringExpenses,
+
+    incomeSources,
+
+    budgetBreakdown,
 
     incomeExpenseTrend,
 
@@ -334,21 +760,40 @@ export async function getAnalysisData(
 
     investmentDistribution,
 
+    investments: investmentItems,
+
     goals: {
       totalGoals: goalsSummary.totalGoals,
-      completedGoals: goalsSummary.completedGoals,
-      targetAmount: round(goalsSummary.targetAmount),
-      savedAmount: round(goalsSummary.savedAmount),
-      overallProgress: round(overallProgress),
+      completedGoals:
+        goalsSummary.completedGoals,
+      targetAmount: round(
+        goalsSummary.targetAmount
+      ),
+      savedAmount: round(
+        goalsSummary.savedAmount
+      ),
+      remainingAmount: round(
+        Math.max(
+          0,
+          goalsSummary.targetAmount -
+            goalsSummary.savedAmount
+        )
+      ),
+      overallProgress: round(
+        overallProgress
+      ),
+      items: goalItems,
     },
 
     netWorthTrend: [],
 
     dataStatus: {
-      hasTransactions: transactions.length > 0,
+      hasTransactions:
+        transactions.length > 0,
       hasBudgets: budgets.length > 0,
       hasGoals: goals.length > 0,
-      hasInvestments: investments.length > 0,
+      hasInvestments:
+        investments.length > 0,
       hasAssets: false,
       hasLiabilities: false,
       hasNetWorthHistory: false,

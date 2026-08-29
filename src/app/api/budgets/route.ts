@@ -3,6 +3,7 @@ import Budget from "@/models/Budget";
 import Transaction from "@/models/Transaction";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
+import { createNotification } from "@/lib/notifications/createNotification";
 
 async function getUserId(request: NextRequest) {
   const session = await auth.api.getSession({
@@ -68,23 +69,72 @@ export async function GET(request: NextRequest) {
       spending.map((item) => [item._id, item.spent])
     );
 
-    const responseBudgets = budgets.map((budget) => {
-      const spent = spendingMap.get(budget.category) || 0;
-      const limit = budget.limit;
-      const percentageUsed =
-        limit > 0 ? Math.round((spent / limit) * 100) : 0;
+    // Build response AND trigger notifications
+    const responseBudgets = await Promise.all(
+      budgets.map(async (budget) => {
+        const spent = spendingMap.get(budget.category) || 0;
+        const limit = budget.limit;
+        const percentageUsed =
+          limit > 0 ? Math.round((spent / limit) * 100) : 0;
 
-      return {
-        _id: budget._id,
-        category: budget.category,
-        limit,
-        month: budget.month,
-        year: budget.year,
-        spent,
-        remaining: limit - spent,
-        percentageUsed,
-      };
-    });
+        // Budget exceeded notification
+        if (spent > limit && limit > 0) {
+          await createNotification({
+            userId,
+            category: "budget",
+            severity: "CRITICAL",
+            title: "Budget exceeded",
+            message: `You've spent ₹${spent.toLocaleString()} of your ₹${limit.toLocaleString()} budget for ${budget.category}.`,
+            ruleKey: `budget-exceeded:${budget._id.toString()}:${year}-${month}`,
+            metadata: {
+              budgetId: budget._id.toString(),
+              category: budget.category,
+              spent,
+              limit,
+              percentageUsed,
+              month: budget.month,
+              year: budget.year,
+            },
+          });
+        }
+
+        // Optional: budget warning at 90%
+        const WARNING_THRESHOLD = 90;
+        if (
+          percentageUsed >= WARNING_THRESHOLD &&
+          spent <= limit
+        ) {
+          await createNotification({
+            userId,
+            category: "budget",
+            severity: "WARNING",
+            title: "Budget warning",
+            message: `You've used ${percentageUsed}% of your ₹${limit.toLocaleString()} budget for ${budget.category}.`,
+            ruleKey: `budget-warning:${budget._id.toString()}:${year}-${month}`,
+            metadata: {
+              budgetId: budget._id.toString(),
+              category: budget.category,
+              spent,
+              limit,
+              percentageUsed,
+              month: budget.month,
+              year: budget.year,
+            },
+          });
+        }
+
+        return {
+          _id: budget._id,
+          category: budget.category,
+          limit,
+          month: budget.month,
+          year: budget.year,
+          spent,
+          remaining: limit - spent,
+          percentageUsed,
+        };
+      })
+    );
 
     return NextResponse.json({
       success: true,

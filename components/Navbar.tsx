@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Menu, X, ChevronDown, Plus } from 'lucide-react'
 import { useSession } from '@/hooks/useSession'
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 
 const Navbar = () => {
@@ -111,6 +112,8 @@ const Navbar = () => {
                 {user?.name || user?.email}
               </span>
 
+              <NotificationBell userId={user.id} />
+
               <div className="relative">
                 <button
                   type="button"
@@ -200,6 +203,11 @@ const Navbar = () => {
 
             {isLoading ? null : isAuthenticated ? (
               <>
+              {user?.id && (
+                <div className="flex justify-center py-2">
+                  <NotificationBell userId={user.id} />
+                </div>
+              )}
                 <div className="rounded-2xl border border-[#10B981]/20 bg-[#10B981]/10 px-4 py-3 text-sm text-[#D4F2D3]">
                   {user?.name || user?.email}
                 </div>
@@ -266,13 +274,13 @@ const Navbar = () => {
                         Reports
                       </Link>
                     </div>
-                  )}
-                </div> */}
+                    )}
+                    </div> */}
                 {showAddTransaction && (
                   <Link
-                    href="/transactions?add=true"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-3 text-sm font-semibold text-[#D4F2D3] transition hover:border-[#10B981]/70 hover:bg-[#10B981]/20 hover:text-white"
+                  href="/transactions?add=true"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#10B981]/40 bg-[#10B981]/10 px-4 py-3 text-sm font-semibold text-[#D4F2D3] transition hover:border-[#10B981]/70 hover:bg-[#10B981]/20 hover:text-white"
                   >
                     <Plus className="h-4 w-4" />
                     Add Transaction
@@ -281,9 +289,9 @@ const Navbar = () => {
               </>
             ) : (
               <Link
-                href="/signup"
-                onClick={() => setIsMenuOpen(false)}
-                className="w-full rounded-full bg-[#10B981] px-4 py-3 text-center text-sm font-semibold text-white"
+              href="/signup"
+              onClick={() => setIsMenuOpen(false)}
+              className="w-full rounded-full bg-[#10B981] px-4 py-3 text-center text-sm font-semibold text-white"
               >
                 Sign Up
               </Link>

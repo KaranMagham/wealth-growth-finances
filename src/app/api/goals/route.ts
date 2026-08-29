@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Goal from "@/models/Goal";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
+import { createNotification } from "@/lib/notifications/createNotification";
 
 async function getUserId(request: NextRequest) {
   const session = await auth.api.getSession({
@@ -31,24 +32,57 @@ export async function GET(request: NextRequest) {
       createdAt: -1,
     });
 
-    const responseGoals = goals.map((goal) => {
-      const targetAmount = goal.targetAmount;
-      const currentAmount = goal.currentAmount;
+    const responseGoals = await Promise.all(
+      goals.map(async (goal) => {
+        const targetAmount = goal.targetAmount as number;
+        const currentAmount = goal.currentAmount as number;
 
-      const progress =
-        targetAmount > 0
-          ? Math.min(
-              Math.round((currentAmount / targetAmount) * 100),
-              100
-            )
-          : 0;
+        const progress =
+          targetAmount > 0
+            ? Math.min(
+                Math.round((currentAmount / targetAmount) * 100),
+                100
+              )
+            : 0;
 
-      return {
-        ...goal.toObject(),
-        progress,
-        completed: progress >= 100,
-      };
-    });
+        // ---- Goal milestone notifications ----
+        const MILESTONES = [50, 100];
+
+        for (const milestone of MILESTONES) {
+          if (progress >= milestone && progress < milestone + 1) {
+            await createNotification({
+              userId,
+              category: "goal",
+              severity: milestone === 100 ? "SUCCESS" : "INFO",
+              title:
+                milestone === 100
+                  ? "Goal completed"
+                  : "Goal milestone reached",
+              message:
+                milestone === 100
+                  ? `You've fully funded your goal: ${goal.name}.`
+                  : `You've reached ${milestone}% of your goal: ${goal.name}.`,
+              ruleKey: `goal-milestone:${goal._id.toString()}:${milestone}`,
+              metadata: {
+                goalId: goal._id.toString(),
+                name: goal.name,
+                targetAmount,
+                currentAmount,
+                progress,
+                milestone,
+              },
+            });
+          }
+        }
+        // --------------------------------------
+
+        return {
+          ...goal.toObject(),
+          progress,
+          completed: progress >= 100,
+        };
+      })
+    );
 
     return NextResponse.json({
       success: true,
