@@ -9,6 +9,7 @@ import AppFooter from "../../components/AppFooter";
 import { useSession } from "@/hooks/useSession";
 import { refreshAllInvestments } from "@/lib/api/investments";
 
+
 interface TransactionRecord {
   _id: string
   type: "Income" | "Expense"

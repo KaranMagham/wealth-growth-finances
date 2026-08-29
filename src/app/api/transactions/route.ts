@@ -4,6 +4,7 @@ import Transaction from "@/models/Transaction";
 import { TRANSACTION_TYPES } from "@/constants/transaction";
 import { getAuthenticatedUserId } from "@/lib/auth-user";
 import { createNotification } from "@/lib/notifications/createNotification";
+import mongoose from "mongoose";
 
 export async function GET(req: NextRequest) {
   try {
@@ -161,6 +162,86 @@ export async function POST(req: NextRequest) {
       });
     }
     // -----------------------------------------
+
+    // ---- Payment notifications ----
+    // Treat Income as "payment received"
+    if (transaction.type === "Income") {
+      await createNotification({
+        userId,
+        category: "payment",
+        severity: "SUCCESS",
+        title: "Payment received",
+        message: `You received ₹${transaction.amount.toLocaleString()} ${transaction.description ? `for ${transaction.description}` : ""}.`,
+        ruleKey: `payment-received:${transaction._id.toString()}`,
+        metadata: {
+          transactionId: transaction._id.toString(),
+          amount: transaction.amount,
+          type: transaction.type,
+          category: transaction.category,
+          description: transaction.description,
+        },
+      });
+    }
+
+    // Optionally, treat certain expenses as "payment failed" if you have a flag.
+    // For now, we'll skip failed payments unless you add a `failed` field.
+    // ---------------------------------
+
+    // ---- Low balance warning ----
+    // Simple balance: total income - total expense
+    const aggregates = await Transaction.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalIncome: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "Income"] }, "$amount", 0],
+            },
+          },
+          totalExpense: {
+            $sum: {
+              $cond: [{ $eq: ["$type", "Expense"] }, "$amount", 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const currentBalance =
+      (aggregates[0]?.totalIncome as number) -
+      (aggregates[0]?.totalExpense as number);
+
+    const LOW_BALANCE_THRESHOLD = 5000; // ₹
+
+    console.log("Balance check:", {
+      currentBalance,
+      threshold: LOW_BALANCE_THRESHOLD,
+      shouldNotify: currentBalance < LOW_BALANCE_THRESHOLD,
+    });
+
+    if (currentBalance < LOW_BALANCE_THRESHOLD) {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      console.log("Sending low balance notification");
+
+      await createNotification({
+        userId,
+        category: "balance",
+        severity: "WARNING",
+        title: "Low balance warning",
+        message: `Your balance is ₹${currentBalance.toLocaleString()}, which is below your threshold of ₹${LOW_BALANCE_THRESHOLD.toLocaleString()}.`,
+        ruleKey: `low-balance:${todayKey}`,
+        metadata: {
+          currentBalance,
+          threshold: LOW_BALANCE_THRESHOLD,
+        },
+      });
+    }
+    // -----------------------------
 
     return NextResponse.json(
       { success: true, transaction },

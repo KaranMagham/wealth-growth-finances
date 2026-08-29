@@ -22,15 +22,15 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    // Last 7 full days
+    // Last full calendar month
     const now = new Date();
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // today 00:00
-    const start = new Date(end);
-    start.setDate(start.getDate() - 7);
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-based
 
-    // Period key: ISO week-based, e.g. "2026-W35"
-    const isoWeek = getISOWeek(start);
-    const periodKey = `${start.getFullYear()}-W${String(isoWeek).padStart(2, "0")}`;
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
+
+    const periodKey = `${year}-${String(month - 1 + 1).padStart(2, "0")}`; // "2026-08", etc.
 
     const pipeline = [
       {
@@ -73,10 +73,9 @@ export async function GET(request: NextRequest) {
 
       const userObjectId = new mongoose.Types.ObjectId(userIdStr);
 
-      // Check if already sent
       const existing = await NotificationLog.findOne({
         userId: userObjectId,
-        type: "weekly_summary",
+        type: "monthly_summary",
         periodKey,
       });
 
@@ -119,22 +118,29 @@ export async function GET(request: NextRequest) {
           `${c._id as string} (₹${(c.amount as number).toLocaleString()})`
       );
 
-      const title = "Your weekly money summary";
+      const monthLabel = start.toLocaleString(undefined, {
+        month: "long",
+        year: "numeric",
+      });
+
+      const title = `Your ${monthLabel} summary`;
       const message =
         topCategories.length > 0
-          ? `Last 7 days: Income ₹${totalIncome.toLocaleString()}, Expense ₹${totalExpense.toLocaleString()} across ${transactions} transactions. Top spends: ${topCategories.join(", ")}.`
-          : `Last 7 days: Income ₹${totalIncome.toLocaleString()}, Expense ₹${totalExpense.toLocaleString()} across ${transactions} transactions.`;
+          ? `${monthLabel}: Income ₹${totalIncome.toLocaleString()}, Expense ₹${totalExpense.toLocaleString()} across ${transactions} transactions. Top spends: ${topCategories.join(", ")}.`
+          : `${monthLabel}: Income ₹${totalIncome.toLocaleString()}, Expense ₹${totalExpense.toLocaleString()} across ${transactions} transactions.`;
 
       await createNotification({
         userId: userIdStr,
-        category: "weekly_summary",
+        category: "monthly_summary",
         severity: "INFO",
         title,
         message,
-        ruleKey: `weekly-summary:${periodKey}`,
+        ruleKey: `monthly-summary:${periodKey}`,
         metadata: {
           periodStart: start.toISOString(),
           periodEnd: end.toISOString(),
+          year,
+          month: month, // 0-based
           totalIncome,
           totalExpense,
           transactions,
@@ -142,10 +148,9 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Log that we sent this summary
       await NotificationLog.create({
         userId: userObjectId,
-        type: "weekly_summary",
+        type: "monthly_summary",
         periodKey,
       });
 
@@ -163,19 +168,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GET /api/cron/weekly-summary error:", error);
+    console.error("GET /api/cron/monthly-summary error:", error);
     return NextResponse.json(
-      { error: "Failed to generate weekly summaries" },
+      { error: "Failed to generate monthly summaries" },
       { status: 500 }
     );
   }
-}
-
-// ISO week number helper
-function getISOWeek(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
