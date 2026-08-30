@@ -3,6 +3,7 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import FAQ from "../../components/FAQ";
 import Image from "next/image";
+import HowItWorksSlider from "../../components/HowItWorksSlider";
 
 const trustItems = ["Secure", "AI Powered", "Investment Tracking", "Smart Reports"];
 
@@ -111,12 +112,12 @@ export default function Home() {
 
           <div>
             <Image
-              src="/logomain.png"
-              alt="Wealth Growth"
-              width={380}
-              height={380}
+              src="/home_panel.png"
+              alt="Wealth Growth dashboard"
+              width={700}
+              height={500}
               priority
-              className="mx-auto h-full w-full max-w-[320px] rounded-full object-cover sm:max-w-[380px]"
+              className="mx-auto ml-20 h-auto w-full max-w-[800px] object-contain"
             />
           </div>
         </section>
@@ -195,6 +196,7 @@ export default function Home() {
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">
               How It Works
             </p>
+
             <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">
               Manage your finances in three simple steps
             </h2>
@@ -207,24 +209,71 @@ export default function Home() {
                 title: "Track Everything in One Place",
                 description:
                   "Bring your income, spending, and cash flow together in one clear view so you always know where your money is going.",
-                bullets: ["Add income & expenses", "Automatic categorization", "Track cash flow"],
-                imageLabel: "Dashboard Screenshot",
+                bullets: [
+                  "Add income & expenses",
+                  "Automatic categorization",
+                  "Track cash flow",
+                ],
+                images: [
+                  {
+                    src: "/dashboard_1.png",
+                    alt: "Wealth Growth dashboard overview showing cash balance, income, and expenses",
+                  },
+                  {
+                    src: "/dashboard_2.png",
+                    alt: "Wealth Growth dashboard showing financial health, budgets, and goals",
+                  },
+                  {
+                    src: "/dashboard_3.png",
+                    alt: "Wealth Growth dashboard showing investments and recent transactions",
+                  },
+                ],
               },
               {
                 step: "02",
                 title: "Plan Your Monthly Budget",
                 description:
                   "Create budgets that fit your goals, stay on top of spending, and make better decisions with less effort.",
-                bullets: ["Monthly budgets", "Spending alerts", "Goal tracking"],
-                imageLabel: "Budget Screenshot",
+                bullets: [
+                  "Monthly budgets",
+                  "Spending alerts",
+                  "Goal tracking",
+                ],
+                images: [
+                  {
+                    src: "/g&b_1.png",
+                    alt: "Wealth Growth budget page showing spending limits and budget progress",
+                  },
+                  {
+                    src: "/g&b_2.png",
+                    alt: "Wealth Growth goals page showing savings targets and progress",
+                  },
+                ],
               },
               {
                 step: "03",
-                title: "Grow with AI Insights",
+                title: "Understand Your Financial Progress",
                 description:
-                  "Use smart insights, wealth tracking, and detailed reports to understand your progress and make stronger choices.",
-                bullets: ["AI insights", "Wealth score", "Actionable reports"],
-                imageLabel: "Analytics Screenshot",
+                  "Explore clear financial analysis and detailed reports to understand your income, expenses, savings, and spending patterns over time.",
+                bullets: [
+                  "Income and expense analysis",
+                  "Category-wise spending reports",
+                  "Clear financial trends",
+                ],
+                images: [
+                  {
+                    src: "/analysis&report_1.png",
+                    alt: "Wealth Growth analysis dashboard showing income, expenses, savings, and spending trends",
+                  },
+                  {
+                    src: "/analysis&report_2.png",
+                    alt: "Wealth Growth analysis dashboard showing income, expenses, savings, and spending trends",
+                  },
+                  {
+                    src: "/analysis&report_3.png",
+                    alt: "Wealth Growth reports page showing detailed financial summaries and charts",
+                  },
+                ],
               },
             ].map((item, index) => {
               const isReversed = index % 2 === 1;
@@ -234,34 +283,40 @@ export default function Home() {
                   key={item.step}
                   className="relative grid items-center gap-10 overflow-hidden rounded-[36px] border border-[#334155] bg-[#0F172A]/80 px-6 py-10 lg:grid-cols-2 lg:px-10 lg:py-14"
                 >
-                  <div className={`absolute -top-8 ${index === 0 ? "left-4" : index === 1 ? "right-4" : "left-4"} text-[180px] font-black text-white/5 sm:text-[220px]`}>
+                  <div
+                    className={`pointer-events-none absolute -top-8 ${index === 0 ? "left-4" : index === 1 ? "right-4" : "left-4"
+                      } text-[180px] font-black text-white/5 sm:text-[220px]`}
+                  >
                     {item.step}
                   </div>
 
-                  <div className={isReversed ? "lg:order-2" : ""}>
-                    <div className="relative z-10 flex h-[320px] items-center justify-center rounded-[28px] border border-[#334155] bg-[#111827] text-center hover:scale-[1.02] hover:border-[#10B981] hover:bg-[#0F172A]/90 hover:shadow-[0_0_40px_rgba(16,185,129,0.12)] transition">
-                      <div>
-                        <p className="text-sm uppercase tracking-[0.35em] text-[#10B981]/80">Image Placeholder</p>
-                        <p className="mt-4 text-2xl font-semibold text-white">{item.imageLabel}</p>
-                        <p className="mt-2 text-sm text-[#94A3B8]">1000 × 700</p>
-                      </div>
-                    </div>
+                  <div className={isReversed ? "relative z-10 lg:order-2" : "relative z-10"}>
+                    <HowItWorksSlider images={item.images} title={item.title} />
                   </div>
 
-                  <div className={isReversed ? "lg:order-1 lg:pr-8" : "lg:pl-2"}>
+                  <div
+                    className={
+                      isReversed
+                        ? "relative z-10 lg:order-1 lg:pr-8"
+                        : "relative z-10 lg:pl-2"
+                    }
+                  >
                     <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#D4AF37]">
                       Step {item.step}
                     </p>
+
                     <h3 className="mt-4 text-4xl font-semibold leading-tight text-white sm:text-5xl">
                       {item.title}
                     </h3>
+
                     <p className="mt-5 max-w-xl text-base leading-8 text-[#CBD5E1]">
                       {item.description}
                     </p>
+
                     <ul className="mt-8 space-y-3 text-base text-[#94A3B8]">
                       {item.bullets.map((bullet) => (
                         <li key={bullet} className="flex items-center gap-3">
-                          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#10B981]" />
+                          <span className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-[#10B981]" />
                           <span>{bullet}</span>
                         </li>
                       ))}

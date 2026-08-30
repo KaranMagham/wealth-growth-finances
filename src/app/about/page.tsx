@@ -108,12 +108,12 @@ export default function AboutPage() {
           </div>
           <div>
             <Image
-              src="/logomain.png"
-              alt="Wealth Growth"
-              width={380}
-              height={380}
+              src="/home_panel.png"
+              alt="Wealth Growth dashboard"
+              width={700}
+              height={500}
               priority
-              className="mx-auto h-full w-full max-w-[320px] rounded-full object-cover sm:max-w-[380px]"
+              className="mx-auto mb-20 h-auto w-full max-w-[800px] object-contain"
             />
           </div>
         </section>
