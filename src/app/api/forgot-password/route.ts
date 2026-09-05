@@ -25,8 +25,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const baseUrl = process.env.BETTER_AUTH_URL || new URL(req.url).origin;
+
     await auth.api.requestPasswordReset({
-      body: { email: normalizedEmail },
+      body: {
+        email: normalizedEmail,
+        redirectTo: `${baseUrl}/reset-password`,
+      },
       headers: Object.fromEntries((await headers()).entries()),
     });
 

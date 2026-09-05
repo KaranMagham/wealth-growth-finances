@@ -16,9 +16,7 @@ export async function sendPasswordResetEmail({ user, url }: PasswordResetEmailOp
   const fromAddress = process.env.SMTP_FROM || smtpUser || "no-reply@wealth-growth-finance.com";
 
   if (!smtpHost || !smtpUser || !smtpPass) {
-    console.warn("[auth] SMTP email credentials are not configured; password reset link will only be logged.");
-    console.info(`[auth] Password reset requested for ${user.email}`);
-    console.info(`[auth] Reset link: ${url}`);
+    console.error("[auth] SMTP email credentials are not configured; password reset email was not sent.");
     return;
   }
 
