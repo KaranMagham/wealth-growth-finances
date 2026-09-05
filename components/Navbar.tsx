@@ -54,7 +54,7 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#334155] bg-[#0F172A]/90 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-8">
         <Link
           href="/"
           className="flex items-center gap-3"
@@ -74,7 +74,7 @@ const Navbar = () => {
               className="h-full w-full rounded-full object-cover"
             />
           </div>
-          <span className="text-lg font-extrabold tracking-wide text-[#F8FAFC]">
+          <span className="hidden text-lg font-extrabold tracking-wide text-[#F8FAFC] sm:inline">
             Wealth Growth
           </span>
         </Link>
@@ -88,12 +88,12 @@ const Navbar = () => {
             setIsMoreOpen(false);
             setIsProfileOpen(false);
           }}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#10B981]/30 bg-[#111827]/80 text-[#D4F2D3] lg:hidden"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#10B981]/30 bg-[#111827]/80 text-[#D4F2D3] xl:hidden"
         >
           {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        <nav className="hidden items-center gap-6 text-sm font-semibold text-[#E2E8F0] lg:flex">
+        <nav className="hidden items-center gap-6 text-sm font-semibold text-[#E2E8F0] xl:flex">
           <Link
             href="/about"
             className="group relative transition duration-300 ease-out hover:-translate-y-0.5 hover:text-[#10B981]"
@@ -253,7 +253,7 @@ const Navbar = () => {
       </div>
 
       {isMenuOpen && (
-        <div className="border-t border-[#334155] bg-[#0F172A]/95 lg:hidden">
+        <div className="max-h-[calc(100vh-5rem)] overflow-y-auto border-t border-[#334155] bg-[#0F172A]/95 xl:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
             {mobileLinks.map((link) => (
               <Link
@@ -272,7 +272,7 @@ const Navbar = () => {
             {isLoading ? null : isAuthenticated ? (
               <>
                 {user?.id && (
-                  <div className="flex justify-center py-2">
+                  <div className="relative flex justify-center py-2">
                     <NotificationBell/>
                   </div>
                 )}
