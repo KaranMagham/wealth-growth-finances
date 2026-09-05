@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:wealth-assistant": "tsx scripts/wealth-assistant-cases.mjs"
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "^13.11.1",
@@ -38,6 +39,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

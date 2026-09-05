@@ -1,14 +1,28 @@
 import type {
   AffordabilityInput,
 } from "./assistantTypes";
+import type {
+  BudgetAnalysisItem,
+  GoalAnalysisItem,
+  InvestmentAnalysisItem,
+  TransactionAnalysisItem,
+} from "@/lib/analysis/analysisTypes";
 
 export interface FinancialContext {
   affordability: AffordabilityInput;
 
+  financialData: {
+    transactions: TransactionAnalysisItem[];
+    budgets: BudgetAnalysisItem[];
+    goals: GoalAnalysisItem[];
+    investments: InvestmentAnalysisItem[];
+  };
+
   summary: {
     income: number;
     expenses: number;
-    savings: number;
+    monthlySurplus: number;
+    accountBalance: number | null;
     savingsRate: number;
     budgetedAmount: number;
     budgetUsed: number;
@@ -63,7 +77,7 @@ export interface FinancialContext {
 }
 
 interface BuildFinancialContextInput {
-  availableCash: number;
+  availableBalance?: number | null;
   averageMonthlyIncome: number;
   averageMonthlyExpenses: number;
   averageMonthlySavings: number;
@@ -83,12 +97,20 @@ interface BuildFinancialContextInput {
   investmentDistribution?: FinancialContext["investmentDistribution"];
   goals?: FinancialContext["goals"];
   dataStatus?: FinancialContext["dataStatus"];
+  transactions?: TransactionAnalysisItem[];
+  budgets?: BudgetAnalysisItem[];
+  goalItems?: GoalAnalysisItem[];
+  investmentItems?: InvestmentAnalysisItem[];
 }
 
 function safeNumber(value: number | undefined) {
   return Number.isFinite(value) && value !== undefined
-    ? Math.max(0, value)
+    ? value
     : 0;
+}
+
+function nonNegative(value: number | undefined) {
+  return Math.max(0, safeNumber(value));
 }
 
 export function buildFinancialContext(
@@ -102,9 +124,8 @@ export function buildFinancialContext(
     input.averageMonthlyExpenses
   );
 
-  const savings = Math.max(
-    0,
-    safeNumber(input.averageMonthlySavings)
+  const savings = safeNumber(
+    input.averageMonthlySavings
   );
 
   const essentialExpenses = safeNumber(
@@ -122,18 +143,21 @@ export function buildFinancialContext(
   return {
     affordability: {
       purchasePrice: 0,
-      availableCash: safeNumber(input.availableCash),
+      availableCash:
+        input.availableBalance === null || input.availableBalance === undefined
+          ? null
+          : nonNegative(input.availableBalance),
       averageMonthlyIncome: income,
       averageMonthlyExpenses: expenses,
       averageMonthlySavings: savings,
       essentialMonthlyExpenses: essentialExpenses,
-      upcomingGoalRequirement: safeNumber(
+      upcomingGoalRequirement: nonNegative(
         input.upcomingGoalRequirement
       ),
-      existingBudgetCommitments: safeNumber(
+      existingBudgetCommitments: nonNegative(
         input.existingBudgetCommitments
       ),
-      currentInvestments: safeNumber(
+      currentInvestments: nonNegative(
         input.currentInvestments
       ),
     },
@@ -141,13 +165,14 @@ export function buildFinancialContext(
     summary: {
       income,
       expenses,
-      savings,
+      monthlySurplus: savings,
+      accountBalance: input.availableBalance ?? null,
       savingsRate,
-      budgetedAmount: safeNumber(
+      budgetedAmount: nonNegative(
         input.budgetedAmount
       ),
-      budgetUsed: safeNumber(input.budgetUsed),
-      currentInvestments: safeNumber(
+      budgetUsed: nonNegative(input.budgetUsed),
+      currentInvestments: nonNegative(
         input.currentInvestments
       ),
       totalInvested: safeNumber(
@@ -159,6 +184,13 @@ export function buildFinancialContext(
       investmentReturnPercentage: safeNumber(
         input.investmentReturnPercentage
       ),
+    },
+
+    financialData: {
+      transactions: input.transactions ?? [],
+      budgets: input.budgets ?? [],
+      goals: input.goalItems ?? [],
+      investments: input.investmentItems ?? [],
     },
 
     expenseBreakdown:

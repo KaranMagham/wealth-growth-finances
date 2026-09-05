@@ -169,6 +169,7 @@ export default function DashboardPage() {
             investmentsPayload.investments || []
           );
         }
+
       } catch (error) {
         if (error instanceof DOMException &&
           error.name === "AbortError") {
@@ -303,6 +304,8 @@ export default function DashboardPage() {
       100
       : 0;
 
+  const totalNetWorth = stats.balance + investmentTotals.current;
+
   const investmentTypeCounts = investments.reduce<
     Record<string, number>
   >((counts, investment) => {
@@ -341,6 +344,8 @@ export default function DashboardPage() {
     (sum, budget) => sum + budget.limit,
     0
   );
+
+  const heroNetWorth = totalNetWorth;
 
   const totalBudgetSpent = budgets.reduce(
     (sum, budget) => sum + budget.spent,
@@ -465,14 +470,15 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="w-full rounded-3xl border border-[#10B981]/30 bg-[#10B981]/10 px-5 py-4 text-left sm:w-auto sm:text-right">
-                  <p className="text-sm text-[#D4F2D3]">Current Balance</p>
+                  <p className="text-sm text-[#D4F2D3]">Total Net Worth</p>
                   <div className="mt-1 flex items-end justify-start gap-2 sm:justify-end">
-                    <span className="text-4xl font-semibold text-white">{formatCurrency(stats.balance)}</span>
+                    <span className="text-4xl font-semibold text-white">{formatCurrency(heroNetWorth)}</span>
                   </div>
                   <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#111827] px-3 py-1 text-sm font-semibold text-[#10B981]">
                     <BadgeCheck className="h-4 w-4" />
-                    {stats.balance >= 0 ? "Positive" : "Needs attention"}
+                    {heroNetWorth >= 0 ? "Positive" : "Needs attention"}
                   </div>
+                  <p className="mt-2 text-xs text-[#94A3B8]">Cash flow balance plus current investment value.</p>
                 </div>
               </div>
 
@@ -480,10 +486,10 @@ export default function DashboardPage() {
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <p className="text-sm uppercase tracking-[0.3em] text-[#94A3B8]">Net Worth</p>
-                    <p className="mt-2 text-3xl font-semibold text-white sm:text-4xl">{formatCurrency(stats.balance)}</p>
+                    <p className="mt-2 text-3xl font-semibold text-white sm:text-4xl">{formatCurrency(totalNetWorth)}</p>
                   </div>
                   <div className="rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#10B981]">
-                    {stats.balance >= 0 ? "Healthy cash flow" : "Spending above income"}
+                    {totalNetWorth >= 0 ? "Positive net worth" : "Needs attention"}
                   </div>
                 </div>
               </div>
@@ -549,7 +555,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-[#94A3B8]">
                   <Landmark className="h-4 w-4 text-[#10B981]" />
                   Financial Health
@@ -626,7 +632,7 @@ export default function DashboardPage() {
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <section className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-semibold text-white">
                     Budget Progress
@@ -645,7 +651,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-5">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span className="text-[#94A3B8]">
                     {formatCurrency(totalBudgetSpent)} spent
                   </span>

@@ -5,8 +5,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { getAnalysisPeriod } from "@/lib/analysis/getAnalysisPeriod";
-import { getAnalysisData } from "@/lib/analysis/getAnalysisData";
-import { buildFinancialContext } from "@/lib/wealth-assistant/buildFinancialContext";
+import { getWealthAssistantContextForPeriod } from "@/lib/wealth-assistant/getWealthAssistantContext";
 
 export const dynamic = "force-dynamic";
 
@@ -38,45 +37,16 @@ export async function GET(request: NextRequest) {
       searchParams.get("to")
     );
 
-    const analysis = await getAnalysisData(
-      userId,
-      period
-    );
-
-    const context = buildFinancialContext({
-      availableCash: Math.max(
-        0,
-        analysis.summary.savings
-      ),
-
-      averageMonthlyIncome:
-        analysis.summary.income,
-
-      averageMonthlyExpenses:
-        analysis.summary.expenses,
-
-      averageMonthlySavings:
-        analysis.summary.savings,
-
-      essentialMonthlyExpenses:
-        analysis.summary.expenses,
-
-      upcomingGoalRequirement: Math.max(
-        0,
-        analysis.goals.targetAmount -
-          analysis.goals.savedAmount
-      ),
-
-      existingBudgetCommitments:
-        analysis.summary.budgetUsed,
-
-      currentInvestments:
-        analysis.summary.investmentValue,
-    });
+    const { context } = await getWealthAssistantContextForPeriod(userId, period, searchParams.get("question") || "");
 
     return NextResponse.json({
       success: true,
-      period: analysis.period,
+      period: {
+        key: period.key,
+        label: period.label,
+        from: period.from,
+        to: period.to,
+      },
       context,
     });
   } catch (error) {

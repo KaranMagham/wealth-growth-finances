@@ -2,13 +2,14 @@ import OpenAI from "openai";
 
 import type { FinancialContext } from "./buildFinancialContext";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 interface AiSuggestionInput {
   question: string;
   financialContext: FinancialContext;
+  conversationFacts?: Record<string, string | number | boolean | undefined>;
+  conversationHistory?: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }>;
   useWebSearch?: boolean;
 }
 
@@ -63,6 +64,10 @@ export async function generateAiSuggestion(
   }
 
   try {
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const tools = input.useWebSearch
       ? [
           {
@@ -87,7 +92,7 @@ Your responsibilities:
 - Combine multiple parts of the financial context when needed.
 - Give practical and cautious recommendations.
 - For goals, create realistic savings plans using the user's actual surplus.
-- For affordability, consider cash, expenses, savings, goals, and emergency buffers.
+- For affordability, use accountBalance only when it is not null. Otherwise explain that monthlySurplus is an estimate and is not cash on hand.
 - For scenario questions, clearly explain the assumptions and estimated effect.
 - For financial-health questions, identify strengths, risks, and prioritized actions.
 
@@ -100,6 +105,10 @@ Rules:
 - Use web search only for current or external information.
 - If web search is used, clearly mention that current web information was used.
 - If important data is missing, say what is missing.
+- Treat summary.monthlySurplus and summary.accountBalance as different values. Never call monthlySurplus an account balance.
+- Only answer personal-finance, budgeting, saving, investing, goals, expenses, income, affordability, or financial-planning questions. Politely refuse unrelated requests.
+- Use the recent conversation history to resolve follow-up references such as "it", "that", or "next month".
+- Treat explicit new purchases as separate from older goals. Use the resolved conversation facts when calculating purchase prices, goal targets, and timelines.
 - Explain calculations in simple language.
 - Keep answers useful and reasonably concise.
 - End with a short informational-guidance disclaimer when giving recommendations.
@@ -108,6 +117,8 @@ Rules:
         input: JSON.stringify({
           userQuestion: input.question,
           financialContext: input.financialContext,
+          conversationHistory: input.conversationHistory ?? [],
+          conversationFacts: input.conversationFacts ?? {},
         }),
 
         ...(tools ? { tools } : {}),

@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
           ? `Last 7 days: Income ₹${totalIncome.toLocaleString()}, Expense ₹${totalExpense.toLocaleString()} across ${transactions} transactions. Top spends: ${topCategories.join(", ")}.`
           : `Last 7 days: Income ₹${totalIncome.toLocaleString()}, Expense ₹${totalExpense.toLocaleString()} across ${transactions} transactions.`;
 
-      await createNotification({
+      const notificationResult = await createNotification({
         userId: userIdStr,
         category: "weekly_summary",
         severity: "INFO",
@@ -142,14 +142,18 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Log that we sent this summary
-      await NotificationLog.create({
-        userId: userObjectId,
-        type: "weekly_summary",
-        periodKey,
-      });
+      if (!notificationResult) {
+        skipped++;
+        continue;
+      }
 
-      processed++;
+      await NotificationLog.create({
+          userId: userObjectId,
+          type: "weekly_summary",
+          periodKey,
+        });
+
+        processed++;
     }
 
     return NextResponse.json({

@@ -101,19 +101,19 @@ export default function AboutPage() {
               <Link href="/login" className="w-full rounded-full bg-[#10B981] px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#059669] sm:w-auto">
                 Get Started
               </Link>
-              <Link href="/support" className="w-full rounded-full border border-[#10B981]/60 bg-[#0F172A]/70 px-6 py-3 text-center text-sm font-semibold text-[#E2E8F0] transition hover:border-[#10B981] hover:bg-[#0F172A] hover:text-[#10B981] sm:w-auto">
+              <Link href="/contact" className="w-full rounded-full border border-[#10B981]/60 bg-[#0F172A]/70 px-6 py-3 text-center text-sm font-semibold text-[#E2E8F0] transition hover:border-[#10B981] hover:bg-[#0F172A] hover:text-[#10B981] sm:w-auto">
                 Contact Us
               </Link>
             </div>
           </div>
-          <div>
+          <div className="w-full min-w-0 lg:max-w-[52%]">
             <Image
               src="/home_panel.png"
               alt="Wealth Growth dashboard"
               width={700}
               height={500}
               priority
-              className="mx-auto mb-20 h-auto w-full max-w-[800px] object-contain"
+              className="mx-auto h-auto w-full max-w-[800px] object-contain"
             />
           </div>
         </section>

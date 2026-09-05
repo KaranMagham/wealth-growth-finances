@@ -1,7 +1,7 @@
 "use client";
 
 export type SessionResponse =
-  | { success: true; session: any }
+  | { success: true; session: { user?: unknown } }
   | { success: false; session: null; message?: string };
 
 export async function getSessionClient(): Promise<SessionResponse> {

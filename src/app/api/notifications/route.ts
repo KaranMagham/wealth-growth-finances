@@ -43,15 +43,24 @@ export async function GET(request: Request) {
 
     await connectDB();
 
-    const notifications = await Notification.find({
+    const notificationQuery = {
       userId: new mongoose.Types.ObjectId(userId),
-    })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean();
+    };
+
+    const [notifications, unreadCount] = await Promise.all([
+      Notification.find(notificationQuery)
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean(),
+      Notification.countDocuments({
+        ...notificationQuery,
+        isRead: false,
+      }),
+    ]);
 
     return NextResponse.json({
       notifications,
+      unreadCount,
     });
   } catch (error) {
     console.error(

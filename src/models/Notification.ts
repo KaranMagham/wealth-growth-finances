@@ -139,7 +139,6 @@ const notificationSchema = new Schema<NotificationDocument>(
 
     scheduledFor: {
       type: Date,
-      index: true,
     },
 
     actionUrl: {

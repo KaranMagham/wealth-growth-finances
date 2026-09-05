@@ -5,7 +5,7 @@ export type AffordabilityStatus =
 
 export interface AffordabilityInput {
   purchasePrice: number;
-  availableCash: number;
+  availableCash: number | null;
   averageMonthlyIncome: number;
   averageMonthlyExpenses: number;
   averageMonthlySavings: number;
@@ -18,7 +18,7 @@ export interface AffordabilityInput {
 export interface AffordabilityResult {
   status: AffordabilityStatus;
   requestedPrice: number;
-  cashAfterPurchase: number;
+  cashAfterPurchase: number | null;
   monthsOfExpensesAfterPurchase: number | null;
   monthsToRebuildPurchaseAmount: number | null;
   recommendedMinimumCashBuffer: number;

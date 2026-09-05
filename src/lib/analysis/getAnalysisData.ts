@@ -416,9 +416,24 @@ export async function getAnalysisData(
 
   const budgetUsed = budgets.reduce(
     (total, budget) => {
-      const categorySpent =
-        expenseByCategory.get(budget.category) ||
-        0;
+      const categorySpent = transactions.reduce(
+        (spent, transaction) => {
+          if (
+            transaction.type !== "Expense" ||
+            transaction.category?.trim() !==
+              budget.category?.trim()
+          ) {
+            return spent;
+          }
+
+          const date = toDate(transaction.date);
+          return date.getUTCFullYear() === budget.year &&
+            date.getUTCMonth() + 1 === budget.month
+            ? spent + (Number(transaction.amount) || 0)
+            : spent;
+        },
+        0
+      );
 
       return total + categorySpent;
     },
@@ -431,9 +446,24 @@ export async function getAnalysisData(
         const limit =
           Number(budget.limit) || 0;
 
-        const spent =
-          expenseByCategory.get(budget.category) ||
-          0;
+        const spent = transactions.reduce(
+          (total, transaction) => {
+            if (
+              transaction.type !== "Expense" ||
+              transaction.category?.trim() !==
+                budget.category?.trim()
+            ) {
+              return total;
+            }
+
+            const date = toDate(transaction.date);
+            return date.getUTCFullYear() === budget.year &&
+              date.getUTCMonth() + 1 === budget.month
+              ? total + (Number(transaction.amount) || 0)
+              : total;
+          },
+          0
+        );
 
         const remaining = limit - spent;
 

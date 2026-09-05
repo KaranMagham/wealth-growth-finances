@@ -7,7 +7,7 @@ export interface DetectedIntent {
   itemName?: string;
 }
 
-function extractPurchasePrice(
+export function extractAmount(
   question: string
 ): number | undefined {
   const normalized = question
@@ -34,10 +34,32 @@ function extractPurchasePrice(
     }
 
     if (unit === "lakh" || unit === "lac") {
-      return amount * 100000;
+      const remainingText = normalized.slice(
+        (amountWithUnitMatch.index ?? 0) +
+          amountWithUnitMatch[0].length
+      );
+      const thousandMatch = remainingText.match(
+        /^\s*(?:and\s+)?(\d+(?:\.\d+)?)\s*thousand\b/i
+      );
+      const thousand = thousandMatch
+        ? Number(thousandMatch[1]) * 1000
+        : 0;
+
+      return amount * 100000 + thousand;
     }
 
     return amount * 1000;
+  }
+
+  const lakhWordsMatch = normalized.match(
+    /^(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*lakh\s*(?:and\s+)?(\d+(?:\.\d+)?)\s*thousand\b/i
+  );
+
+  if (lakhWordsMatch) {
+    return (
+      Number(lakhWordsMatch[1]) * 100000 +
+      Number(lakhWordsMatch[2]) * 1000
+    );
   }
 
   const formattedRupeeMatch = question.match(
@@ -54,7 +76,17 @@ function extractPurchasePrice(
       : undefined;
   }
 
+  const bareAmountMatch = normalized.match(/\b(\d{4,})\b/);
+  if (bareAmountMatch) {
+    const amount = Number(bareAmountMatch[1]);
+    return Number.isFinite(amount) ? amount : undefined;
+  }
+
   return undefined;
+}
+
+function extractPurchasePrice(question: string) {
+  return extractAmount(question);
 }
 
 function containsAny(
@@ -89,6 +121,38 @@ export function detectIntent(
       confidence: "high",
       purchasePrice:
         extractPurchasePrice(question),
+    };
+  }
+
+  if (
+    containsAny(normalized, [
+      "travel",
+      "trip",
+      "vacation",
+      "holiday",
+      "himalaya",
+      "himalayas",
+      "go to",
+      "buy a",
+      "buy an",
+      "purchase a",
+      "purchase an",
+    ]) &&
+    containsAny(normalized, [
+      "plan",
+      "want",
+      "save",
+      "afford",
+      "cost",
+      "buy",
+      "purchase",
+      "how much",
+    ])
+  ) {
+    return {
+      intent: "financial_planning",
+      confidence: "medium",
+      purchasePrice: extractPurchasePrice(question),
     };
   }
 

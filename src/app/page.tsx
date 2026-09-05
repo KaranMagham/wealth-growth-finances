@@ -110,14 +110,14 @@ export default function Home() {
             </div>
           </div>
 
-          <div>
+          <div className="w-full min-w-0 lg:max-w-[52%]">
             <Image
               src="/home_panel.png"
               alt="Wealth Growth dashboard"
               width={700}
               height={500}
               priority
-              className="mx-auto ml-20 h-auto w-full max-w-[800px] object-contain"
+              className="mx-auto h-auto w-full max-w-[800px] object-contain"
             />
           </div>
         </section>

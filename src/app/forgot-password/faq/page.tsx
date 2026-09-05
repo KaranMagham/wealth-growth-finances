@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import Navbar from '../../../components/Navbar'
-import Footer from '../../../components/Footer'
-import FAQ from '../../../components/FAQ'
+import Navbar from '../../../../components/Navbar'
+import Footer from '../../../../components/Footer'
+import FAQ from '../../../../components/FAQ'
 
 const faqItems = [
   {

@@ -23,14 +23,14 @@ export function calculateAffordability(
   } = input;
 
   const cashAfterPurchase =
-    availableCash - purchasePrice;
+    availableCash === null ? null : availableCash - purchasePrice;
 
   const recommendedMinimumCashBuffer =
     Math.max(essentialMonthlyExpenses, averageMonthlyExpenses) *
     3;
 
   const monthsOfExpensesAfterPurchase =
-    averageMonthlyExpenses > 0
+    cashAfterPurchase !== null && averageMonthlyExpenses > 0
       ? cashAfterPurchase / averageMonthlyExpenses
       : null;
 
@@ -41,7 +41,9 @@ export function calculateAffordability(
 
   let status: AffordabilityStatus;
 
-  if (cashAfterPurchase < 0) {
+  if (cashAfterPurchase === null) {
+    status = "possible_with_caution";
+  } else if (cashAfterPurchase < 0) {
     status = "not_recommended";
   } else if (
     cashAfterPurchase < recommendedMinimumCashBuffer ||
@@ -54,7 +56,11 @@ export function calculateAffordability(
 
   const reasons: string[] = [];
 
-  if (cashAfterPurchase < 0) {
+  if (cashAfterPurchase === null) {
+    reasons.push(
+      "No account balance is recorded, so this estimate uses monthly surplus and cannot confirm whether you have enough cash today."
+    );
+  } else if (cashAfterPurchase < 0) {
     reasons.push(
       "The purchase price is higher than the available cash."
     );
@@ -77,6 +83,7 @@ export function calculateAffordability(
 
   if (
     upcomingGoalRequirement > 0 &&
+    cashAfterPurchase !== null &&
     cashAfterPurchase < upcomingGoalRequirement
   ) {
     reasons.push(
@@ -97,7 +104,7 @@ export function calculateAffordability(
   return {
     status,
     requestedPrice: purchasePrice,
-    cashAfterPurchase: round(cashAfterPurchase) ?? 0,
+    cashAfterPurchase: round(cashAfterPurchase),
     monthsOfExpensesAfterPurchase:
       round(monthsOfExpensesAfterPurchase),
     monthsToRebuildPurchaseAmount:
@@ -105,7 +112,7 @@ export function calculateAffordability(
     recommendedMinimumCashBuffer,
     reasons,
     assumptions: [
-      "Available cash excludes long-term investments unless explicitly included.",
+      "No account balance was available; monthly surplus is not treated as cash on hand.",
       "A minimum cash buffer of three months of expenses is used.",
       "This is an informational estimate, not guaranteed financial advice.",
     ],

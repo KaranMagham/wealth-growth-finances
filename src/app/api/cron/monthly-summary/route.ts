@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
           ? `${monthLabel}: Income ₹${totalIncome.toLocaleString()}, Expense ₹${totalExpense.toLocaleString()} across ${transactions} transactions. Top spends: ${topCategories.join(", ")}.`
           : `${monthLabel}: Income ₹${totalIncome.toLocaleString()}, Expense ₹${totalExpense.toLocaleString()} across ${transactions} transactions.`;
 
-      await createNotification({
+      const notificationResult = await createNotification({
         userId: userIdStr,
         category: "monthly_summary",
         severity: "INFO",
@@ -148,13 +148,18 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      await NotificationLog.create({
-        userId: userObjectId,
-        type: "monthly_summary",
-        periodKey,
-      });
+      if (!notificationResult) {
+        skipped++;
+        continue;
+      }
 
-      processed++;
+      await NotificationLog.create({
+          userId: userObjectId,
+          type: "monthly_summary",
+          periodKey,
+        });
+
+        processed++;
     }
 
     return NextResponse.json({
