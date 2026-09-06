@@ -44,8 +44,10 @@ function latestAssistant(history: ConversationHistoryItem[]) {
 }
 
 function extractMonths(value: string) {
-  const match = value.match(/(?:after|in|within|over|for)?\s*(\d+)\s*months?/i);
-  return match ? Number(match[1]) : undefined;
+  const match = value.match(/(?:after|in|within|over|for|next)?\s*(\d+)\s*(months?|years?)/i);
+  if (!match) return undefined;
+  const amount = Number(match[1]);
+  return match[2].toLowerCase().startsWith("year") ? amount * 12 : amount;
 }
 
 function extractMonthlySaving(value: string) {
@@ -59,7 +61,10 @@ function extractPurchase(value: string) {
   if (!/(buy|purchase|afford|instead|want)/i.test(value)) return undefined;
   const amount = extractAmount(value);
   const itemMatch = value.match(/(?:buy|purchase|afford|want\s+(?:to\s+)?(?:buy|purchase)?|want)\s+(?:a|an|the)?\s*(?:₹|rs\.?|inr)?\s*(?:\d[\d,.]*\s*(?:crore|cr|lakh|lac|k|thousand)?\s*)?([a-z][a-z -]{1,30})/i);
-  const item = itemMatch?.[1]?.trim().replace(/\s+(?:for|and|with|at)\s*$/i, "").replace(/\s+and\s+save.*$/i, "");
+  const item = itemMatch?.[1]
+    ?.trim()
+    .split(/\s+(?:in|within|over|for|and|with|at|after|next)\b/i)[0]
+    .trim();
   if (!amount && !item) return undefined;
   return { item, amount };
 }
@@ -81,7 +86,10 @@ function extractExpenseCategory(value: string) {
 }
 
 function isExplicitPurchase(value: string) {
-  return ( /\b(?:buy|purchase|afford)\b/i.test(value) && Boolean(extractAmount(value)) ) || (/\bwant\b/i.test(value) && Boolean(extractAmount(value)) && /\b(?:house|car|bike|phone|laptop|gift)\b/i.test(value));
+  return Boolean(extractPurchase(value)?.item) && (
+    /\b(?:buy|purchase|afford)\b/i.test(value) ||
+    (/\bwant\b/i.test(value) && Boolean(extractAmount(value)))
+  );
 }
 
 function resolveShortAnswer(value: string, state: ConversationState, previousAssistant: string) {
@@ -90,7 +98,10 @@ function resolveShortAnswer(value: string, state: ConversationState, previousAss
   if (amount && /(?:save|saving|monthly|per month|target|amount|cost|price)/i.test(previousAssistant)) {
     if (/save|saving|monthly|per month/i.test(previousAssistant)) state.monthlySaving = amount;
     else if (state.goalName || state.topic === "goal") state.targetAmount = amount;
-    else state.purchasePrice = amount;
+    else {
+      state.purchasePrice = amount;
+      state.targetAmount = amount;
+    }
   }
   if (months) state.timelineMonths = months;
 }
@@ -122,7 +133,7 @@ export function resolveConversationState(history: ConversationHistoryItem[], cur
     if (isExplicitPurchase(value)) {
       state.purchaseItem = purchase?.item || state.purchaseItem;
       state.purchasePrice = purchase?.amount;
-      if (purchase?.amount) state.targetAmount = purchase.amount;
+      state.targetAmount = purchase?.amount;
       state.topic = "purchase";
     } else if (purchase?.item && /what about|instead/i.test(normalized)) {
       state.purchaseItem = purchase.item;
@@ -130,7 +141,7 @@ export function resolveConversationState(history: ConversationHistoryItem[], cur
       state.topic = "purchase";
     }
     if (monthlySaving) state.monthlySaving = monthlySaving;
-    if (goal?.goalName && goal.goalName !== "to buy a") {
+    if (goal?.goalName && goal.goalName !== "to buy a" && !isExplicitPurchase(value)) {
       state.goalName = goal.goalName;
       state.topic = "goal";
       if (goal.amount) state.targetAmount = goal.amount;

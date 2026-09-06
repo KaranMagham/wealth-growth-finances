@@ -300,6 +300,10 @@ function buildResolvedCalculationAnswer(
     (/when|how many months|timeline/i.test(previousAssistant) && Boolean(timelineMonths));
   const isPurchase = Boolean(facts.purchaseItem || facts.purchasePrice);
 
+  if (facts.purchaseItem && facts.timelineMonths && !targetAmount) {
+    return `What is the target price for the ${facts.purchaseItem}? I can calculate the monthly saving needed over ${facts.timelineMonths} months.`;
+  }
+
   if (isPurchase && facts.purchasePrice && monthlySaving && !hasRealBalance && /afford|buy|purchase|gift|house|car|bike/i.test(question)) {
     const months = Math.ceil(facts.purchasePrice / monthlySaving);
     return `I do not have a recorded account balance, so I cannot confirm whether you can pay ${formatCurrency(facts.purchasePrice)} today. At your stated saving capacity of ${formatCurrency(monthlySaving)} per month, saving the full amount from ₹0 would take approximately ${months} months.`;
@@ -470,12 +474,21 @@ export async function POST(request: NextRequest) {
     });
 
     const deterministicFacts = getConversationFacts(typedHistory, question);
+    const currentPurchase =
+      deterministicFacts.topic === "purchase" &&
+      Boolean(deterministicFacts.purchaseItem);
     const facts: ConversationFacts = {
       ...deterministicFacts,
-      itemName: deterministicFacts.itemName ?? understanding?.purchaseItem,
-      purchasePrice: deterministicFacts.purchasePrice ?? understanding?.purchasePrice,
+      itemName: currentPurchase
+        ? deterministicFacts.itemName
+        : deterministicFacts.itemName ?? understanding?.purchaseItem,
+      purchasePrice: currentPurchase
+        ? deterministicFacts.purchasePrice
+        : deterministicFacts.purchasePrice ?? understanding?.purchasePrice,
       goalName: deterministicFacts.goalName ?? understanding?.goalName,
-      goalAmount: deterministicFacts.goalAmount ?? understanding?.goalAmount,
+      goalAmount: currentPurchase
+        ? deterministicFacts.goalAmount
+        : deterministicFacts.goalAmount ?? understanding?.goalAmount,
       goalMonths: deterministicFacts.goalMonths ?? understanding?.goalMonths,
       expenseCategory: deterministicFacts.expenseCategory ?? understanding?.expenseCategory,
     };

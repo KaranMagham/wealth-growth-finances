@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
 import type { FinancialContext } from "./buildFinancialContext";
 
@@ -13,76 +14,7 @@ interface AiSuggestionInput {
   useWebSearch?: boolean;
 }
 
-function isQuotaError(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const value = error as {
-    status?: number;
-    code?: string;
-    type?: string;
-    error?: {
-      code?: string;
-      type?: string;
-    };
-  };
-
-  return (
-    value.status === 429 ||
-    value.code === "insufficient_quota" ||
-    value.type === "insufficient_quota" ||
-    value.error?.code === "insufficient_quota" ||
-    value.error?.type === "insufficient_quota"
-  );
-}
-
-function isRateLimitError(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const value = error as {
-    status?: number;
-    code?: string;
-  };
-
-  return (
-    value.status === 429 ||
-    value.code === "rate_limit_exceeded"
-  );
-}
-
-export async function generateAiSuggestion(
-  input: AiSuggestionInput
-): Promise<string | null> {
-  if (
-    process.env.AI_ENABLED !== "true" ||
-    !process.env.OPENAI_API_KEY
-  ) {
-    return null;
-  }
-
-  try {
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    const tools = input.useWebSearch
-      ? [
-          {
-            type: "web_search_preview" as const,
-          },
-        ]
-      : undefined;
-
-    const response = await client.responses.create(
-      {
-        model:
-          process.env.OPENAI_MODEL ||
-          "gpt-4o-mini",
-
-        instructions: `
+const WEALTH_ASSISTANT_INSTRUCTIONS = `
 You are Wealth Assistant for a personal finance application.
 
 Answer the user's question using the complete financial context provided.
@@ -112,46 +44,143 @@ Rules:
 - Explain calculations in simple language.
 - Keep answers useful and reasonably concise.
 - End with a short informational-guidance disclaimer when giving recommendations.
-`,
+`;
 
-        input: JSON.stringify({
-          userQuestion: input.question,
-          financialContext: input.financialContext,
-          conversationHistory: input.conversationHistory ?? [],
-          conversationFacts: input.conversationFacts ?? {},
-        }),
+function buildAiInput(input: AiSuggestionInput) {
+  return JSON.stringify({
+    userQuestion: input.question,
+    financialContext: input.financialContext,
+    conversationHistory: input.conversationHistory ?? [],
+    conversationFacts: input.conversationFacts ?? {},
+  });
+}
 
-        ...(tools ? { tools } : {}),
-      },
-      {
-        timeout: 15_000,
-        maxRetries: 0,
-      }
-    );
+function getProviderFailureReason(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return "request_error";
+  }
 
-    return response.output_text?.trim() || null;
-  } catch (error) {
-    if (isQuotaError(error)) {
-      console.warn(
-        "AI suggestion unavailable: OpenAI quota is exhausted."
-      );
+  const value = error as {
+    status?: number;
+    code?: string;
+    name?: string;
+    message?: string;
+  };
+  const details = `${value.code ?? ""} ${value.name ?? ""} ${value.message ?? ""}`.toLowerCase();
 
-      return null;
-    }
+  if (value.status === 429 || details.includes("quota") || details.includes("rate_limit")) {
+    return "quota_or_rate_limit";
+  }
 
-    if (isRateLimitError(error)) {
-      console.warn(
-        "AI suggestion unavailable: request rate limit reached."
-      );
+  if (details.includes("timeout") || details.includes("timed out") || details.includes("abort")) {
+    return "timeout";
+  }
 
-      return null;
-    }
+  if (value.status !== undefined && value.status >= 500) {
+    return "provider_unavailable";
+  }
 
-    console.error(
-      "AI suggestion request failed:",
-      error
-    );
+  if (details.includes("unavailable") || details.includes("service_unavailable")) {
+    return "provider_unavailable";
+  }
 
+  return "api_error";
+}
+
+function logProviderFailure(provider: "OpenAI" | "Gemini", error: unknown) {
+  console.warn("Wealth assistant provider failed", {
+    provider,
+    reason: getProviderFailureReason(error),
+  });
+}
+
+export async function generateAiSuggestion(
+  input: AiSuggestionInput
+): Promise<string | null> {
+  if (process.env.AI_ENABLED !== "true") {
     return null;
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      const tools = input.useWebSearch
+        ? [
+            {
+              type: "web_search_preview" as const,
+            },
+          ]
+        : undefined;
+
+      const response = await client.responses.create(
+        {
+          model:
+            process.env.OPENAI_MODEL ||
+            "gpt-4o-mini",
+
+          instructions: WEALTH_ASSISTANT_INSTRUCTIONS,
+
+          input: buildAiInput(input),
+
+          ...(tools ? { tools } : {}),
+        },
+        {
+          timeout: 15_000,
+          maxRetries: 0,
+        }
+      );
+
+      const answer = response.output_text?.trim();
+      if (answer) {
+        return answer;
+      }
+    } catch (error) {
+      logProviderFailure("OpenAI", error);
+    }
+  } else {
+    console.warn("Wealth assistant provider unavailable", {
+      provider: "OpenAI",
+      reason: "not_configured",
+    });
+  }
+
+  return generateGeminiSuggestion(input);
+}
+
+export async function generateGeminiSuggestion(
+  input: AiSuggestionInput
+): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("Wealth assistant provider unavailable", {
+      provider: "Gemini",
+      reason: "not_configured",
+    });
+    return null;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+
+  try {
+    const client = new GoogleGenAI({ apiKey });
+    const response = await client.models.generateContent({
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      contents: buildAiInput(input),
+      config: {
+        systemInstruction: WEALTH_ASSISTANT_INSTRUCTIONS,
+        abortSignal: controller.signal,
+      },
+    });
+
+    return response.text?.trim() || null;
+  } catch (error) {
+    logProviderFailure("Gemini", error);
+    return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }

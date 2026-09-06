@@ -41,6 +41,24 @@ assert.equal(carTimelineState.purchasePrice, 700000);
 assert.equal(carTimelineState.timelineMonths, 7);
 assert.equal(Math.round(carTimelineState.targetAmount / carTimelineState.timelineMonths), 100000);
 
+const carYearsState = resolveConversationState(
+  [{ role: "user", content: "I want to buy a ₹7 lakh car" }, { role: "assistant", content: "When do you want to reach it?" }],
+  "I want it in 2 years"
+);
+assert.equal(carYearsState.purchaseItem, "car");
+assert.equal(carYearsState.purchasePrice, 700000);
+assert.equal(carYearsState.timelineMonths, 24);
+assert.equal(Math.round(carYearsState.targetAmount / carYearsState.timelineMonths), 29167);
+
+const newBikeWithoutPrice = resolveConversationState(
+  [{ role: "user", content: "I want to buy a ₹7 lakh car" }],
+  "I want to buy the bike in next 2 years"
+);
+assert.equal(newBikeWithoutPrice.purchaseItem, "bike");
+assert.equal(newBikeWithoutPrice.purchasePrice, undefined);
+assert.equal(newBikeWithoutPrice.targetAmount, undefined);
+assert.equal(newBikeWithoutPrice.timelineMonths, 24);
+
 const replacedCarState = resolveConversationState(
   [{ role: "user", content: "Can I afford a ₹2 lakh bike?" }],
   "I want to buy a 700000 car."
