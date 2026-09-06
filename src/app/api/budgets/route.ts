@@ -206,14 +206,38 @@ export async function POST(request: NextRequest) {
       year,
     });
 
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+    const spending = await Transaction.aggregate([
+      {
+        $match: {
+          userId,
+          type: "Expense",
+          category,
+          date: {
+            $gte: startDate,
+            $lt: endDate,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          spent: { $sum: "$amount" },
+        },
+      },
+    ]);
+
+    const spent = spending[0]?.spent || 0;
+
     return NextResponse.json(
       {
         success: true,
         budget: {
           ...budget.toObject(),
-          spent: 0,
-          remaining: limit,
-          percentageUsed: 0,
+          spent,
+          remaining: limit - spent,
+          percentageUsed: limit > 0 ? Math.round((spent / limit) * 100) : 0,
         },
       },
       { status: 201 }

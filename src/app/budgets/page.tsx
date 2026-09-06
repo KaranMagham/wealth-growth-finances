@@ -32,7 +32,8 @@ const formatCurrency = (value: number) =>
 
 const initialForm = {
   category: "",
-  limit: ""
+  limit: "",
+  month: new Date().toISOString().slice(0, 7),
 };
 
 export default function BudgetsPage() {
@@ -115,8 +116,6 @@ export default function BudgetsPage() {
     setSaving(true);
 
     try {
-      const now = new Date();
-
       const response = await fetch("/api/budgets", {
         method: "POST",
         headers: {
@@ -125,8 +124,8 @@ export default function BudgetsPage() {
         body: JSON.stringify({
           category: form.category,
           limit: Number(form.limit),
-          month: now.getMonth() + 1,
-          year: now.getFullYear(),
+          month: Number(form.month.split("-")[1]),
+          year: Number(form.month.split("-")[0]),
         }),
       });
 
@@ -277,25 +276,24 @@ export default function BudgetsPage() {
                   />
                 </div>
 
-                {/* <div>
+                <div>
                   <label className="text-sm text-[#CBD5E1]">
-                    Period
+                    Month
                   </label>
 
-                  <select
-                    value={form.period}
+                  <input
+                    type="month"
+                    value={form.month}
                     onChange={(event) =>
                       setForm({
                         ...form,
-                        // period: event.target.value as BudgetPeriod,
+                        month: event.target.value,
                       })
                     }
                     className="mt-2 w-full rounded-xl border border-[#334155] bg-[#111827] px-4 py-3 text-white outline-none focus:border-[#10B981]"
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
-                </div> */}
+                    required
+                  />
+                </div>
 
                 {message && (
                   <p className="rounded-xl border border-[#334155] bg-[#111827] px-3 py-2 text-sm text-[#CBD5E1]">
@@ -415,7 +413,10 @@ function BudgetCard({
         <div>
           <h2 className="text-xl font-semibold">{budget.category}</h2>
           <p className="mt-1 text-sm capitalize text-[#94A3B8]">
-            {budget.month}/{budget.year} budget
+            {new Intl.DateTimeFormat("en-IN", {
+              month: "long",
+              year: "numeric",
+            }).format(new Date(budget.year || 0, (budget.month || 1) - 1, 1))} budget
           </p>
         </div>
 

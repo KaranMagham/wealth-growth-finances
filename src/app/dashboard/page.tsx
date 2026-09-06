@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowRight, BadgeCheck, Briefcase, CreditCard, Landmark, Sparkles, Target, TrendingUp } from "lucide-react"
+import { ArrowRight, Briefcase, CreditCard, Landmark, Sparkles, Target, TrendingUp } from "lucide-react"
 import Navbar from "../../../components/Navbar"
 import AppFooter from "../../components/AppFooter";
 import { useSession } from "@/hooks/useSession";
@@ -306,6 +306,16 @@ export default function DashboardPage() {
 
   const totalNetWorth = stats.balance + investmentTotals.current;
 
+  const allocatedGoalAmount = goals.reduce(
+    (sum, goal) => sum + goal.currentAmount,
+    0
+  );
+
+  const availableCash = Math.max(
+    totalNetWorth - allocatedGoalAmount,
+    0
+  );
+
   const investmentTypeCounts = investments.reduce<
     Record<string, number>
   >((counts, investment) => {
@@ -344,8 +354,6 @@ export default function DashboardPage() {
     (sum, budget) => sum + budget.limit,
     0
   );
-
-  const heroNetWorth = totalNetWorth;
 
   const totalBudgetSpent = budgets.reduce(
     (sum, budget) => sum + budget.spent,
@@ -469,30 +477,20 @@ export default function DashboardPage() {
                     Your financial snapshot is based on your latest transactions and updates automatically as you add new entries.
                   </p>
                 </div>
-                <div className="w-full rounded-3xl border border-[#10B981]/30 bg-[#10B981]/10 px-5 py-4 text-left sm:w-auto sm:text-right">
-                  <p className="text-sm text-[#D4F2D3]">Total Net Worth</p>
-                  <div className="mt-1 flex items-end justify-start gap-2 sm:justify-end">
-                    <span className="text-4xl font-semibold text-white">{formatCurrency(heroNetWorth)}</span>
+                <div className="grid w-full gap-3 sm:grid-cols-2">
+                  <div className="rounded-3xl border border-[#10B981]/30 bg-[#10B981]/10 px-5 py-4 text-left">
+                    <p className="text-sm text-[#D4F2D3]">Total Net Worth</p>
+                    <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(totalNetWorth)}</p>
+                    <p className="mt-2 text-xs text-[#94A3B8]">Total value of your financial position</p>
                   </div>
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#111827] px-3 py-1 text-sm font-semibold text-[#10B981]">
-                    <BadgeCheck className="h-4 w-4" />
-                    {heroNetWorth >= 0 ? "Positive" : "Needs attention"}
+                  <div className="rounded-3xl border border-[#38BDF8]/30 bg-[#38BDF8]/10 px-5 py-4 text-left">
+                    <p className="text-sm text-[#BAE6FD]">Available Cash</p>
+                    <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(availableCash)}</p>
+                    <p className="mt-2 text-xs text-[#94A3B8]">Cash available after goal allocations</p>
                   </div>
-                  <p className="mt-2 text-xs text-[#94A3B8]">Cash flow balance plus current investment value.</p>
                 </div>
               </div>
 
-              <div className="mt-8 rounded-[28px] border border-[#1F2937] bg-[#111827]/80 p-5 sm:p-6">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.3em] text-[#94A3B8]">Net Worth</p>
-                    <p className="mt-2 text-3xl font-semibold text-white sm:text-4xl">{formatCurrency(totalNetWorth)}</p>
-                  </div>
-                  <div className="rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#10B981]">
-                    {totalNetWorth >= 0 ? "Positive net worth" : "Needs attention"}
-                  </div>
-                </div>
-              </div>
             </section>
 
             <aside className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)] sm:p-6">
