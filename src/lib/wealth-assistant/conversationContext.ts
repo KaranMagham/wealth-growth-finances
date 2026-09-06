@@ -44,27 +44,43 @@ function latestAssistant(history: ConversationHistoryItem[]) {
 }
 
 function extractMonths(value: string) {
-  const match = value.match(/(?:after|in|within|over|for|next)?\s*(\d+)\s*(months?|years?)/i);
+  const match = value.match(/(?:after|in|within|over|for|next)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(months?|years?)/i);
   if (!match) return undefined;
-  const amount = Number(match[1]);
+  const amountWords: Record<string, number> = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+  };
+  const amount = Number(match[1]) || amountWords[match[1].toLowerCase()];
   return match[2].toLowerCase().startsWith("year") ? amount * 12 : amount;
 }
 
 function extractMonthlySaving(value: string) {
   if (!/(save|saving|set aside|put aside)/i.test(value)) return undefined;
   if (!/(monthly|per month|each month|every month|a month)/i.test(value)) return undefined;
+  if (/how much should i save|what should i save|save monthly for/i.test(value)) return undefined;
   const savingText = value.slice(value.search(/save|saving|set aside|put aside/i));
   return extractAmount(savingText);
 }
 
 function extractPurchase(value: string) {
-  if (!/(buy|purchase|afford|instead|want)/i.test(value)) return undefined;
   const amount = extractAmount(value);
+  if (!/(buy|purchase|afford|instead|want|costing|costs|\bfor\b)/i.test(value)) return undefined;
   const itemMatch = value.match(/(?:buy|purchase|afford|want\s+(?:to\s+)?(?:buy|purchase)?|want)\s+(?:a|an|the)?\s*(?:₹|rs\.?|inr)?\s*(?:\d[\d,.]*\s*(?:crore|cr|lakh|lac|k|thousand)?\s*)?([a-z][a-z -]{1,30})/i);
-  const item = itemMatch?.[1]
+  const alternateItemMatch = value.match(/\b(?:for|costing|costs)\s+(?:a|an|the)?\s*(?:₹|rs\.?|inr)?\s*(?:\d[\d,.]*\s*(?:crore|cr|lakh|lac|k|thousand)?\s*)?([a-z][a-z -]{1,30})/i);
+  const item = (itemMatch?.[1] || alternateItemMatch?.[1])
     ?.trim()
-    .split(/\s+(?:in|within|over|for|and|with|at|after|next)\b/i)[0]
-    .trim();
+    .split(/\s+(?:in|within|over|for|and|with|at|after|next|till|until|costing|costs|have)\b/i)[0]
+    .trim()
+    .replace(/\s+(?:lakh|lac|crore|cr|k|thousand)s?$/i, "")
+    .replace(/^(?:it|this|that)$/i, "");
   if (!amount && !item) return undefined;
   return { item, amount };
 }
@@ -88,7 +104,8 @@ function extractExpenseCategory(value: string) {
 function isExplicitPurchase(value: string) {
   return Boolean(extractPurchase(value)?.item) && (
     /\b(?:buy|purchase|afford)\b/i.test(value) ||
-    (/\bwant\b/i.test(value) && Boolean(extractAmount(value)))
+    (/\bwant\b/i.test(value) && Boolean(extractAmount(value))) ||
+    (Boolean(extractAmount(value)) && /\b(?:for|costing|costs)\b/i.test(value))
   );
 }
 
@@ -172,7 +189,10 @@ export function applyCurrentPurchaseFacts(question: string, facts: ConversationF
 
 export function resolveConversationIntent(question: string, history: ConversationHistoryItem[], facts: ConversationFacts): DetectedIntent {
   const detected = detectIntent(question);
-  if (facts.questionType === "affordability_now") return { ...detected, intent: "affordability", purchasePrice: facts.purchasePrice, itemName: facts.purchaseItem, confidence: "high" };
+  const affordabilityContext =
+    facts.questionType === "affordability_now" ||
+    history.some((message) => message.role === "user" && /can i afford|affordable for me|can i buy|within my budget|purchase affordable|finances handle|will i be able to afford|manage this purchase/i.test(message.content));
+  if (affordabilityContext) return { ...detected, intent: "affordability", purchasePrice: facts.purchasePrice, itemName: facts.purchaseItem, confidence: "high" };
   if (facts.questionType === "time_to_target" || facts.questionType === "required_monthly_saving") return { ...detected, intent: "financial_planning", confidence: "high" };
   if (facts.questionType === "spending_analysis") return { ...detected, intent: "spending_analysis", confidence: "high" };
   if (facts.isContextualFollowUp) return { ...detected, intent: "financial_planning", confidence: "medium" };

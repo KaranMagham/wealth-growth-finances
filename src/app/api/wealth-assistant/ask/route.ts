@@ -20,6 +20,10 @@ import { getWealthAssistantContext } from "@/lib/wealth-assistant/getWealthAssis
 import { getConversationTitle } from "@/lib/wealth-assistant/conversationTitle";
 import { generateAiSuggestion } from "@/lib/wealth-assistant/generateAiSuggestion";
 import { shouldUseWebSearch } from "@/lib/wealth-assistant/shouldUseWebSearch";
+import {
+  buildScenarioAnswer,
+  matchQuestionScenario,
+} from "@/lib/wealth-assistant/questionLibrary";
 import { understandConversation } from "@/lib/wealth-assistant/understandConversation";
 import WealthAssistantConversation, {
   type WealthAssistantConversationDocument,
@@ -290,8 +294,11 @@ function buildResolvedCalculationAnswer(
   question: string,
   facts: ConversationFacts,
   hasRealBalance: boolean,
-  previousAssistant: string
+  previousAssistant: string,
+  intent: DetectedIntent["intent"]
 ) {
+  if (intent === "affordability") return null;
+
   const targetAmount = facts.targetAmount ?? facts.purchasePrice;
   const monthlySaving = facts.monthlySaving;
   const timelineMonths = facts.timelineMonths;
@@ -514,6 +521,8 @@ export async function POST(request: NextRequest) {
       Boolean(facts.isContextualFollowUp) ||
       understanding?.isFinanceRelated === true;
 
+    const matchedScenario = matchQuestionScenario(question, facts);
+
     if (!financeRelated) {
       const answer =
         "I’m your Wealth Growth financial assistant, so I can help with budgeting, saving, investments, expenses, goals, and other personal-finance questions.";
@@ -549,11 +558,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (matchedScenario && detected.intent !== "affordability") {
+      const scenarioAnswer = buildScenarioAnswer(matchedScenario, facts);
+      if (scenarioAnswer) {
+        await saveAssistantAnswer(scenarioAnswer);
+        return NextResponse.json({
+          success: true,
+          intent: detected.intent,
+          confidence: detected.confidence,
+          answer: scenarioAnswer,
+          conversationId: String(conversation._id),
+          period: analysis.period,
+          aiGenerated: false,
+          webSearchUsed: false,
+        });
+      }
+    }
+
     const resolvedAnswer = buildResolvedCalculationAnswer(
       question,
       facts,
       context.summary.accountBalance !== null,
-      [...typedHistory].reverse().find((item) => item.role === "assistant")?.content || ""
+      [...typedHistory].reverse().find((item) => item.role === "assistant")?.content || "",
+      detected.intent
     );
 
     if (resolvedAnswer) {
@@ -598,6 +625,42 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (detected.intent === "affordability") {
+      if (!detected.purchasePrice || detected.purchasePrice <= 0) {
+        const answer =
+          "Please include the purchase price, such as ₹2 lakh or ₹2,00,000.";
+        await saveAssistantAnswer(answer);
+        return NextResponse.json({
+          success: true,
+          intent: detected.intent,
+          confidence: detected.confidence,
+          answer,
+          conversationId: String(conversation._id),
+          period: analysis.period,
+          aiGenerated: false,
+          webSearchUsed: false,
+        });
+      }
+
+      const result = calculateAffordability({
+        ...context.affordability,
+        purchasePrice: detected.purchasePrice,
+      });
+      const answer = `Based on your recorded financial data:\n\n${result.reasons.join("\n")}\n\nThis is an informational estimate, not guaranteed financial advice.`;
+      await saveAssistantAnswer(answer);
+      return NextResponse.json({
+        success: true,
+        intent: detected.intent,
+        confidence: detected.confidence,
+        answer,
+        calculation: result,
+        conversationId: String(conversation._id),
+        period: analysis.period,
+        aiGenerated: false,
+        webSearchUsed: false,
+      });
+    }
+
     const webSearchUsed =
       getWebSearchFlag(question);
 
@@ -620,53 +683,6 @@ export async function POST(request: NextRequest) {
         conversationId: String(conversation._id),
         period: analysis.period,
         aiGenerated: true,
-        webSearchUsed,
-      });
-    }
-
-    if (detected.intent === "affordability") {
-      if (
-        !detected.purchasePrice ||
-        detected.purchasePrice <= 0
-      ) {
-        const answer =
-          "Please include the purchase price, such as ₹2 lakh or ₹2,00,000.";
-        await saveAssistantAnswer(answer);
-        return NextResponse.json({
-          success: true,
-          intent: detected.intent,
-          confidence: detected.confidence,
-          answer,
-          conversationId: String(conversation._id),
-          period: analysis.period,
-          aiGenerated: false,
-          webSearchUsed,
-        });
-      }
-
-      const result =
-        calculateAffordability({
-          ...context.affordability,
-          purchasePrice:
-            detected.purchasePrice,
-        });
-
-      const answer = `Based on your recorded financial data:
-
-    ${result.reasons.join("\n")}
-
-    This is an informational estimate, not guaranteed financial advice.`;
-      await saveAssistantAnswer(answer);
-
-      return NextResponse.json({
-        success: true,
-        intent: detected.intent,
-        confidence: detected.confidence,
-        answer,
-        calculation: result,
-        conversationId: String(conversation._id),
-        period: analysis.period,
-        aiGenerated: false,
         webSearchUsed,
       });
     }

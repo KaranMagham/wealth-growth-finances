@@ -15,7 +15,7 @@ export function extractAmount(
     .replace(/,/g, "");
 
   const amountWithUnitMatch = normalized.match(
-    /(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(crore|cr|lakh|lac|k)\b/i
+    /(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(crores?|cr|lakhs?|lacs?|k)\b/i
   );
 
   if (amountWithUnitMatch) {
@@ -29,11 +29,11 @@ export function extractAmount(
       return undefined;
     }
 
-    if (unit === "crore" || unit === "cr") {
+    if (unit.startsWith("crore") || unit === "cr") {
       return amount * 10000000;
     }
 
-    if (unit === "lakh" || unit === "lac") {
+    if (unit.startsWith("lakh") || unit.startsWith("lac")) {
       const remainingText = normalized.slice(
         (amountWithUnitMatch.index ?? 0) +
           amountWithUnitMatch[0].length
@@ -114,6 +114,13 @@ export function detectIntent(
       "afford this",
       "afford it",
       "financially afford",
+      "affordable for me",
+      "comfortably buy",
+      "within my budget",
+      "purchase affordable",
+      "finances handle",
+      "will i be able to afford",
+      "manage this purchase",
     ])
   ) {
     return {

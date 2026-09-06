@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       searchParams.get("to")
     );
 
-    const { context } = await getWealthAssistantContextForPeriod(userId, period, searchParams.get("question") || "");
+    const { context } = await getWealthAssistantContextForPeriod(userId, period);
 
     return NextResponse.json({
       success: true,

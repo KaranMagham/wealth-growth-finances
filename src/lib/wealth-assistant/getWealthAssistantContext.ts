@@ -45,28 +45,15 @@ export async function getWealthAssistantContext(
   question: string
 ): Promise<{ period: AnalysisPeriod; context: FinancialContext; analysis: Awaited<ReturnType<typeof getAnalysisData>> }> {
   const period = getAssistantPeriod(question);
-  return getWealthAssistantContextForPeriod(userId, period, question);
+  return getWealthAssistantContextForPeriod(userId, period);
 }
 
 export async function getWealthAssistantContextForPeriod(
   userId: string,
-  period: AnalysisPeriod,
-  question = ""
+  period: AnalysisPeriod
 ): Promise<{ period: AnalysisPeriod; context: FinancialContext; analysis: Awaited<ReturnType<typeof getAnalysisData>> }> {
   const analysis = await getAnalysisData(userId, period);
   const months = Math.max(1, analysis.incomeExpenseTrend.length);
-  const normalizedQuestion = question.toLowerCase();
-  const detailRequested = /specific|which|what did|merchant|transaction|category|food|grocery|amazon|goal|investment|holding|budget/.test(normalizedQuestion);
-  const matchesQuestion = (value: string) => normalizedQuestion.includes(value.toLowerCase());
-  const relevantTransactions = detailRequested
-    ? analysis.transactions.filter((transaction) => [transaction.category, transaction.merchant, transaction.description].some((value) => matchesQuestion(value))).slice(0, 50)
-    : [];
-  const relevantGoals = detailRequested
-    ? analysis.goals.items.filter((goal) => matchesQuestion(goal.name)).slice(0, 20)
-    : [];
-  const relevantInvestments = detailRequested
-    ? analysis.investments.filter((investment) => [investment.name, investment.type, investment.symbol || ""].some((value) => matchesQuestion(value))).slice(0, 20)
-    : [];
 
   const context = buildFinancialContext({
     averageMonthlyIncome: analysis.summary.income / months,
@@ -99,10 +86,10 @@ export async function getWealthAssistantContextForPeriod(
       hasGoals: analysis.dataStatus.hasGoals,
       hasInvestments: analysis.dataStatus.hasInvestments,
     },
-    transactions: relevantTransactions,
-    budgets: detailRequested ? analysis.budgetBreakdown : [],
-    goalItems: relevantGoals,
-    investmentItems: relevantInvestments,
+    transactions: analysis.transactions,
+    budgets: analysis.budgetBreakdown,
+    goalItems: analysis.goals.items,
+    investmentItems: analysis.investments,
   });
 
   return { period, context, analysis };
