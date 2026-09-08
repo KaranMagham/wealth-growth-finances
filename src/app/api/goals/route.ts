@@ -3,6 +3,7 @@ import Goal from "@/models/Goal";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications/createNotification";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 async function getUserId(request: NextRequest) {
   const session = await auth.api.getSession({
@@ -177,6 +178,11 @@ export async function POST(request: NextRequest) {
       targetDate: new Date(targetDate),
       completed: currentAmount >= targetAmount,
     });
+
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (session?.user) {
+      await recordActivity({ userId, sessionId: session.session.id, action: "GOAL_CREATED" });
+    }
 
     return NextResponse.json(
       {

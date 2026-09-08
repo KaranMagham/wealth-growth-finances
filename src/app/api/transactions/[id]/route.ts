@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/mongodb";
 import Transaction from "@/models/Transaction";
 import { TRANSACTION_TYPES } from "@/constants/transaction";
 import { getAuthenticatedUserId } from "@/lib/auth-user";
+import { auth } from "@/lib/auth";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -80,6 +82,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     await existing.save();
 
+    const session = await auth.api.getSession({ headers: req.headers });
+    if (session?.user) {
+      await recordActivity({ userId, sessionId: session.session.id, action: "TRANSACTION_UPDATED" });
+    }
+
     return NextResponse.json({ success: true, transaction: existing }, { status: 200 });
   } catch (error) {
     console.error("Update transaction error:", error);
@@ -102,6 +109,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     if (!transaction) {
       return NextResponse.json({ success: false, message: "Transaction not found" }, { status: 404 });
+    }
+
+    const session = await auth.api.getSession({ headers: req.headers });
+    if (session?.user) {
+      await recordActivity({ userId, sessionId: session.session.id, action: "TRANSACTION_DELETED" });
     }
 
     return NextResponse.json({ success: true, message: "Transaction deleted" }, { status: 200 });

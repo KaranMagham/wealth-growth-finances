@@ -9,6 +9,7 @@ import {
     calculateInvestmentValues,
 } from "@/lib/investmentCalculations";
 import mongoose from "mongoose";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 type RouteContext = {
     params: Promise<{
@@ -252,6 +253,11 @@ export async function POST(
             date: new Date(date),
             notes: notes || undefined,
         });
+
+        const authenticatedSession = await auth.api.getSession({ headers: await headers() });
+        if (authenticatedSession?.user) {
+            await recordActivity({ userId, sessionId: authenticatedSession.session.id, action: "INVESTMENT_TRANSACTION_CREATED" });
+        }
 
         return NextResponse.json(
             {

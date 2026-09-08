@@ -4,6 +4,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 
 import { auth } from "@/lib/auth";
+import { recordActivity } from "@/lib/activity/recordActivity";
 import {
     AnalysisPeriodError,
     getAnalysisPeriod,
@@ -654,6 +655,10 @@ export async function GET(request: NextRequest) {
         );
 
         const pdfBuffer = await buildPdf(analysis);
+
+        if (session?.user) {
+            await recordActivity({ userId, sessionId: session.session.id, action: "REPORT_GENERATED" });
+        }
 
         const fileName = [
             "wealth-growth-analysis",

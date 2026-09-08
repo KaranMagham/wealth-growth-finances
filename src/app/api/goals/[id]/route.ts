@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Goal from "@/models/Goal";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -46,6 +47,8 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    await recordActivity({ userId, sessionId: session.session.id, action: "GOAL_DELETED" });
 
     return NextResponse.json({
       success: true,

@@ -8,6 +8,7 @@ import Investment from "@/models/Investment";
 import {
   calculateInvestmentValues
 } from "@/lib/investmentCalculations";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 type BondInterestFrequency =
   | "Monthly"
@@ -443,6 +444,11 @@ export async function PATCH(
 
     await investment.save();
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (session?.user) {
+      await recordActivity({ userId, sessionId: session.session.id, action: "INVESTMENT_UPDATED" });
+    }
+
     return NextResponse.json({
       success: true,
       investment,
@@ -513,6 +519,11 @@ export async function DELETE(
       _id: id,
       userId,
     });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (session?.user) {
+      await recordActivity({ userId, sessionId: session.session.id, action: "INVESTMENT_DELETED" });
+    }
 
     return NextResponse.json({
       success: true,

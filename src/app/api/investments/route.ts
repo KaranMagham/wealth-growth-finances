@@ -10,6 +10,7 @@ import {
   calculateInvestmentValues,
 } from "@/lib/investmentCalculations";
 import { createNotification } from "@/lib/notifications/createNotification";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 const INVESTMENT_TYPES = [
   "Stocks",
@@ -526,6 +527,11 @@ export async function POST(request: NextRequest) {
       }
       // -------------------------------------------
     });
+
+    const authenticatedSession = await auth.api.getSession({ headers: await headers() });
+    if (authenticatedSession?.user) {
+      await recordActivity({ userId, sessionId: authenticatedSession.session.id, action: "INVESTMENT_CREATED" });
+    }
 
     return NextResponse.json(
       {

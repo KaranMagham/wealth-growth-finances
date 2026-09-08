@@ -29,6 +29,7 @@ import WealthAssistantConversation, {
   type WealthAssistantConversationDocument,
 } from "@/models/WealthAssistantConversation";
 import WealthAssistantMessage from "@/models/WealthAssistantMessage";
+import { recordActivity } from "@/lib/activity/recordActivity";
 import { connectDB } from "@/lib/mongodb";
 
 export const dynamic = "force-dynamic";
@@ -456,6 +457,8 @@ export async function POST(request: NextRequest) {
       role: "user",
       content: question,
     });
+
+    await recordActivity({ userId, sessionId: session.session.id, action: "WEALTH_ASSISTANT_USED" });
 
     if (conversation.title === "New Conversation") {
       conversation.title = getConversationTitle(question);

@@ -5,6 +5,8 @@ import { TRANSACTION_TYPES } from "@/constants/transaction";
 import { getAuthenticatedUserId } from "@/lib/auth-user";
 import { createNotification } from "@/lib/notifications/createNotification";
 import mongoose from "mongoose";
+import { auth } from "@/lib/auth";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 export async function GET(req: NextRequest) {
   try {
@@ -136,6 +138,11 @@ export async function POST(req: NextRequest) {
       paymentMethod,
       date,
     });
+
+    const session = await auth.api.getSession({ headers: req.headers });
+    if (session?.user) {
+      await recordActivity({ userId, sessionId: session.session.id, action: "TRANSACTION_CREATED" });
+    }
 
     // ---- Notification: large transaction ----
     const LARGE_TRANSACTION_THRESHOLD = 10000; // ₹

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Goal from "@/models/Goal";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -68,6 +69,8 @@ export async function POST(
       goal.currentAmount >= goal.targetAmount;
 
     await goal.save();
+
+    await recordActivity({ userId, sessionId: session.session.id, action: "GOAL_CONTRIBUTED" });
 
     const progress =
       goal.targetAmount > 0

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
-import FloatingWealthAssistant from "@/components/wealth-assistant/FloatingWealthAssistant";
+import ConditionalWealthAssistant from "@/components/wealth-assistant/ConditionalWealthAssistant";
+import PresenceHeartbeat from "@/components/presence/PresenceHeartbeat";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -122,10 +123,11 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#020617] font-sans text-white">
         <div className="flex min-h-screen flex-col">
           <main className="flex-1">
+            <PresenceHeartbeat />
             {children}
           </main>
 
-          <FloatingWealthAssistant />
+          <ConditionalWealthAssistant />
         </div>
       </body>
     </html>

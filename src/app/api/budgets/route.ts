@@ -4,6 +4,7 @@ import Transaction from "@/models/Transaction";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications/createNotification";
+import { recordActivity } from "@/lib/activity/recordActivity";
 
 async function getUserId(request: NextRequest) {
   const session = await auth.api.getSession({
@@ -205,6 +206,11 @@ export async function POST(request: NextRequest) {
       month,
       year,
     });
+
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (session?.user) {
+      await recordActivity({ userId, sessionId: session.session.id, action: "BUDGET_CREATED" });
+    }
 
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 1);
