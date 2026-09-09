@@ -1,0 +1,3 @@
+import AdminResourcePage from "../AdminResourcePage";
+type Row = Record<string, unknown>;
+export default function AdminAssistantPage() { return <AdminResourcePage<Row> title="Wealth Assistant" eyebrow="Assistant" description="Usage events currently persisted by the application. Provider, intent, latency, and fallback telemetry are not stored yet." endpoint="/api/admin/assistant" columns={[{ key: "event", label: "Event" }, { key: "user", label: "User" }, { key: "provider", label: "Provider" }, { key: "intent", label: "Intent" }, { key: "outcome", label: "Outcome" }, { key: "createdAt", label: "Created" }]} />; }

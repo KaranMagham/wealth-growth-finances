@@ -1,286 +1,147 @@
-import Link from 'next/link'
-import Navbar from '../../../components/Navbar'
-import Footer from '../../../components/Footer'
-import FAQ from '../../../components/FAQ'
-import Image from 'next/image'
+import Link from "next/link";
+import {
+  Bell,
+  BrainCircuit,
+  ChartNoAxesCombined,
+  CheckCircle2,
+  Goal,
+  LockKeyhole,
+  ReceiptText,
+  WalletCards,
+} from "lucide-react";
+import Navbar from "../../../components/Navbar";
+import Footer from "../../../components/Footer";
 
-const whyChooseItems = [
+const capabilities = [
   {
-    title: 'Secure Authentication',
-    description: 'Your financial information is protected using secure authentication and modern security practices.',
+    title: "One financial overview",
+    description: "See cash balance, savings, net worth, budgets, goals, investments, and recent activity together on the dashboard.",
+    icon: ChartNoAxesCombined,
   },
   {
-    title: 'Modern User Interface',
-    description: 'A clean and responsive interface designed to make financial management simple and enjoyable.',
+    title: "Transactions that stay useful",
+    description: "Record income and expenses, review recent activity, and understand the flow behind your financial decisions.",
+    icon: ReceiptText,
   },
   {
-    title: 'Smart Analytics',
-    description: 'Understand your financial performance with meaningful statistics and visual reports.',
+    title: "Budgets with clear progress",
+    description: "Set category limits and follow spending progress before small changes become surprises.",
+    icon: WalletCards,
   },
   {
-    title: 'AI Assistance',
-    description: 'Personalized recommendations help you make smarter financial decisions.',
+    title: "Goals with contribution history",
+    description: "Create financial goals, add contributions, and keep a dated record of every step toward the target.",
+    icon: Goal,
   },
   {
-    title: 'Responsive Design',
-    description: 'Access your financial information seamlessly across desktop, tablet, and mobile devices.',
+    title: "Investment tracking",
+    description: "Track investments, valuation, profit and loss, asset mix, and current portfolio performance in one place.",
+    icon: ChartNoAxesCombined,
   },
   {
-    title: 'Future Ready',
-    description: 'Built with scalable technologies to support future features and continuous improvements.',
+    title: "Insights and assistance",
+    description: "Use financial analysis, reports, and the AI Wealth Assistant to turn your recorded data into practical context.",
+    icon: BrainCircuit,
   },
-]
+  {
+    title: "Notifications that matter",
+    description: "Receive in-app updates for relevant milestones, summaries, alerts, and other activity, with read state under your control.",
+    icon: Bell,
+  },
+  {
+    title: "Private by account",
+    description: "Authentication, session checks, and user-scoped data access keep your financial workspace separate from everyone else’s.",
+    icon: LockKeyhole,
+  },
+];
 
-const techStacks = [
-  { name: 'Next.js', accent: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400/70 hover:bg-emerald-500/20 hover:shadow-[0_0_20px_rgba(16,185,129,0.16)]' },
-  { name: 'TypeScript', accent: 'border-sky-400/30 bg-sky-500/10 text-sky-200 hover:border-sky-400/70 hover:bg-sky-500/20 hover:shadow-[0_0_20px_rgba(56,189,248,0.16)]' },
-  { name: 'Tailwind CSS', accent: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:border-cyan-400/70 hover:bg-cyan-500/20 hover:shadow-[0_0_20px_rgba(34,211,238,0.16)]' },
-  { name: 'Node.js', accent: 'border-lime-400/30 bg-lime-500/10 text-lime-200 hover:border-lime-400/70 hover:bg-lime-500/20 hover:shadow-[0_0_20px_rgba(132,204,22,0.16)]' },
-  { name: 'Express.js', accent: 'border-violet-400/30 bg-violet-500/10 text-violet-200 hover:border-violet-400/70 hover:bg-violet-500/20 hover:shadow-[0_0_20px_rgba(167,139,250,0.16)]' },
-  { name: 'MongoDB', accent: 'border-amber-400/30 bg-amber-500/10 text-amber-200 hover:border-amber-400/70 hover:bg-amber-500/20 hover:shadow-[0_0_20px_rgba(245,158,11,0.16)]' },
-  { name: 'JWT Authentication', accent: 'border-rose-400/30 bg-rose-500/10 text-rose-200 hover:border-rose-400/70 hover:bg-rose-500/20 hover:shadow-[0_0_20px_rgba(251,113,133,0.16)]' },
-  { name: 'AI Integration', accent: 'border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-200 hover:border-fuchsia-400/70 hover:bg-fuchsia-500/20 hover:shadow-[0_0_20px_rgba(232,121,249,0.16)]' },
-]
-
-const roadmapItems = [
-  'Authentication',
-  'Dashboard',
-  'Budget Management',
-  'Investment Tracking',
-  'Analytics',
-  'AI Wealth Assistant',
-  'Notifications',
-  'Mobile Application',
-]
-
-const aboutFaqs = [
+const faqs = [
   {
-    question: 'What makes Wealth Growth different?',
-    answer: 'Wealth Growth combines budgeting, expense tracking, investment monitoring, and AI insights into one modern financial dashboard.',
+    question: "What can I manage in Wealth Growth?",
+    answer: "You can manage transactions, budgets, goals, contributions, investments, notifications, and financial analysis from the same account.",
   },
   {
-    question: 'Is Wealth Growth secure?',
-    answer: 'Yes. The platform is designed with strong authentication and security best practices to protect your financial data.',
+    question: "Can I use Wealth Growth on my phone?",
+    answer: "Yes. The dashboard and core workflows are responsive and designed for desktop, tablet, and mobile screens.",
   },
   {
-    question: 'Can I manage goals and budgets in one place?',
-    answer: 'Absolutely — Wealth Growth helps you set goals, monitor progress, and keep budgets aligned with your financial plans.',
+    question: "Does Wealth Growth support social sign-in?",
+    answer: "Yes. Email and password authentication are supported alongside Google and GitHub sign-in when configured for the application.",
   },
-  {
-    question: 'Will Wealth Growth support mobile devices?',
-    answer: 'Yes. The platform is built with responsive design so it works smoothly across desktop, tablet, and mobile screens.',
-  },
-]
+];
 
 export default function AboutPage() {
   return (
     <>
       <Navbar />
-
-      <main className="relative isolate overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),linear-gradient(135deg,#020617_0%,#0F172A_60%,#111827_100%)]">
-        <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:36px_36px]" />
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full bg-[#10B981]/20 blur-[120px]" />
-
-        <section className="relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 py-12 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-24">
-          <div className="max-w-2xl text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-[#1E293B]/80 px-3 py-2 text-sm font-medium text-[#F8FAFC] shadow-lg shadow-[#10B981]/10">
-              <span className="text-[#D4AF37]">✨</span>
-              <span>About Wealth Growth</span>
+      <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(135deg,#020617_0%,#0F172A_60%,#111827_100%)] text-white">
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/35 bg-[#10B981]/10 px-3 py-1.5 text-sm font-semibold text-[#D4F2D3]">
+              <CheckCircle2 className="h-4 w-4 text-[#10B981]" />
+              A clearer view of your money
             </div>
-
-            <h1 className="mt-7 text-4xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">
-              Building Smarter Financial Habits,
-              <span className="mt-2 block text-[#10B981]">One Decision at a Time.</span>
+            <h1 className="mt-6 text-4xl font-semibold leading-tight sm:text-6xl">
+              Wealth Growth brings your financial life into focus.
             </h1>
-
-            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-[#CBD5E1] lg:mx-0">
-              Wealth Growth is a modern financial management platform designed to help individuals organize their finances, monitor investments, create budgets, and achieve long-term financial goals. Our mission is to simplify money management through an intuitive, secure, and intelligent experience.
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-[#CBD5E1]">
+              Wealth Growth is a personal finance workspace for organizing day-to-day money decisions and building toward long-term goals. It keeps the numbers, progress, and context you need close at hand.
             </p>
-
-            <div className="mt-8 flex flex-wrap justify-center gap-4 lg:justify-start">
-              <Link href="/login" className="w-full rounded-full bg-[#10B981] px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#059669] sm:w-auto">
-                Get Started
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/signup" className="rounded-xl bg-[#10B981] px-5 py-3 text-sm font-semibold text-[#022C22] transition hover:bg-[#34D399]">
+                Create your account
               </Link>
-              <Link href="/contact" className="w-full rounded-full border border-[#10B981]/60 bg-[#0F172A]/70 px-6 py-3 text-center text-sm font-semibold text-[#E2E8F0] transition hover:border-[#10B981] hover:bg-[#0F172A] hover:text-[#10B981] sm:w-auto">
-                Contact Us
+              <Link href="/dashboard" className="rounded-xl border border-[#334155] bg-[#0F172A]/80 px-5 py-3 text-sm font-semibold text-[#E2E8F0] transition hover:border-[#10B981] hover:text-[#6EE7B7]">
+                Explore the dashboard
               </Link>
             </div>
           </div>
-          <div className="w-full min-w-0 lg:max-w-[52%]">
-            <Image
-              src="/home_panel.png"
-              alt="Wealth Growth dashboard"
-              width={700}
-              height={500}
-              priority
-              className="mx-auto h-auto w-full max-w-[800px] object-contain"
-            />
-          </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="max-w-4xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Our Story</p>
-            <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Why We Built Wealth Growth</h2>
-            <p className="mt-5 text-lg leading-8 text-[#CBD5E1]">
-              Managing personal finances often requires using multiple applications for budgeting, expense tracking, investments, and financial planning. This scattered approach makes it difficult to gain a complete understanding of one&apos;s financial health.
-            </p>
-            <p className="mt-4 text-lg leading-8 text-[#CBD5E1]">
-              Wealth Growth was created to solve this problem by bringing every essential financial tool together in one modern platform. Instead of switching between different applications, users can monitor their income, expenses, investments, goals, and overall financial progress from a single dashboard.
-            </p>
+        <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8 lg:pb-24">
+          <div className="mb-8 max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#10B981]">What is here today</p>
+            <h2 className="mt-3 text-3xl font-semibold sm:text-4xl">Tools that work together</h2>
+            <p className="mt-4 leading-7 text-[#94A3B8]">Each part of Wealth Growth feeds a more useful picture of your financial health, without asking you to maintain separate systems.</p>
           </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-[32px] border border-[#334155] bg-[#0F172A]/80 p-8 sm:p-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Our Mission</p>
-            <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Our Mission</h2>
-            <p className="mt-5 max-w text-lg leading-8 text-[#CBD5E1]">
-              Our mission is to make personal finance simple, accessible, and intelligent for everyone. By combining powerful financial tools with modern technology, Wealth Growth helps users build better financial habits, make informed decisions, and confidently work toward long-term financial success.
-            </p>
-          </div>
-        </section>
-
-        <FAQ
-          id="faq"
-          subtitle="FAQ"
-          title="About Wealth Growth"
-          faqs={aboutFaqs}
-        />
-
-        {/* <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">What We Offer</p>
-            <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Everything You Need to Manage Your Money</h2>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            {offerings.map((item) => (
-              <div key={item.title} className="rounded-[28px] border border-[#334155] bg-[#111827]/90 p-6 transition hover:-translate-y-1 hover:border-[#10B981] hover:bg-[#0F172A]/90">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#10B981]/10 text-2xl">✦</div>
-                <h3 className="mt-6 text-xl font-semibold text-white">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-[#CBD5E1]">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </section> */}
-
-        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Why Choose Wealth Growth</p>
-            <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Why Choose Wealth Growth?</h2>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {whyChooseItems.map((item) => (
-              <div key={item.title} className="rounded-[24px] border border-[#334155] bg-[#111827]/90 p-6 transaction hover:-translate-y-1 hover:border-[#10B981] hover:bg-[#0F172A]/90">
-                <h3 className="text-xl font-semibold text-white">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-[#CBD5E1]">{item.description}</p>
-              </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {capabilities.map(({ title, description, icon: Icon }) => (
+              <article key={title} className="rounded-3xl border border-[#334155] bg-[#0F172A]/90 p-5 transition hover:-translate-y-1 hover:border-[#10B981]/60">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#10B981]/10 text-[#10B981]"><Icon className="h-5 w-5" /></div>
+                <h3 className="mt-5 text-lg font-semibold">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#94A3B8]">{description}</p>
+              </article>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="rounded-[32px] border border-[#334155] bg-[#0F172A]/80 p-8 sm:p-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Vision</p>
-            <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Our Vision</h2>
-            <p className="mt-5 max-w-4xl text-lg leading-8 text-[#CBD5E1]">
-              We envision Wealth Growth becoming a complete digital financial companion that empowers users to confidently manage their money, grow their wealth, and achieve financial independence through technology-driven solutions.
-            </p>
+        <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8 lg:pb-24">
+          <div className="grid gap-6 rounded-3xl border border-[#334155] bg-[#111827]/80 p-6 sm:p-8 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:p-10">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#10B981]">Built around trust</p>
+              <h2 className="mt-3 text-3xl font-semibold">Your account stays yours.</h2>
+              <p className="mt-4 max-w-2xl leading-7 text-[#CBD5E1]">Wealth Growth uses authenticated sessions and user-scoped access across financial records. Google and GitHub profile data can be used for sign-in and account personalization, while email and password accounts have the same core workspace.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="rounded-2xl border border-[#334155] bg-[#0F172A] p-4"><p className="font-semibold text-white">Authenticated workspace</p><p className="mt-1 text-sm text-[#94A3B8]">Your dashboard, goals, budgets, and records are tied to your account.</p></div>
+              <div className="rounded-2xl border border-[#334155] bg-[#0F172A] p-4"><p className="font-semibold text-white">Actionable context</p><p className="mt-1 text-sm text-[#94A3B8]">Reports and assistant responses use the financial information you choose to record.</p></div>
+            </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Technology Stack</p>
-            <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Built with Modern Technologies</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-[#CBD5E1]">
-              Wealth Growth is developed using modern web technologies to deliver a fast, secure, and scalable experience.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-3">
-            {techStacks.map((item) => (
-              <span
-                key={item.name}
-                className={`rounded-full border border-[#334155] bg-[#111827]/90 px-4 py-2 text-sm font-medium text-[#E2E8F0] transition-all duration-300 hover:-translate-y-0.5 ${item.accent}`}
-              >
-                {item.name}
-              </span>
+        <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8 lg:pb-24">
+          <h2 className="text-3xl font-semibold">Frequently asked</h2>
+          <div className="mt-6 space-y-3">
+            {faqs.map((faq) => (
+              <details key={faq.question} className="group rounded-2xl border border-[#334155] bg-[#0F172A]/80 p-5">
+                <summary className="cursor-pointer list-none font-semibold text-white">{faq.question}</summary>
+                <p className="mt-3 text-sm leading-6 text-[#94A3B8]">{faq.answer}</p>
+              </details>
             ))}
           </div>
         </section>
-
-        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Development Roadmap</p>
-            <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Project Roadmap</h2>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {roadmapItems.map((item, index) => {
-              const completed = index < 5
-              return (
-                <div key={item} className="rounded-[24px] border border-[#334155] bg-[#111827]/90 p-5">
-                  <div className="flex items-center gap-3">
-                    <span className={`inline-flex h-3 w-3 rounded-full ${completed ? 'bg-[#10B981]' : 'bg-[#D4AF37]'}`} />
-                    <span className="text-sm font-semibold text-[#F8FAFC]">{item}</span>
-                  </div>
-                  <p className="mt-3 text-sm text-[#94A3B8]">{completed ? 'Completed' : 'Planned'}</p>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-[32px] border border-[#334155] bg-[#0F172A]/80 p-8 sm:p-10 lg:flex lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">Meet the Developer</p>
-              <h2 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Meet the Developer</h2>
-              <p className="mt-5 text-lg leading-8 text-[#CBD5E1]">
-                Hi, I&apos;m Karan Magham, a third-year Computer Science student at the University of Mumbai. Wealth Growth is my academic project created with the vision of simplifying personal finance through technology. This project reflects my passion for software development, user experience, and financial technology.
-              </p>
-            </div>
-
-            <div className="mt-8 flex gap-3 lg:mt-0">
-              <Link href="https://github.com/KaranMagham" className="rounded-full border border-[#10B981]/50 bg-[#10B981]/10 px-5 py-3 text-sm font-semibold text-[#10B981] transition hover:bg-[#10B981]/20">
-                GitHub
-              </Link>
-              <Link href="https://www.linkedin.com/in/karan-magham-05b086357/" className="rounded-full border border-[#D4AF37]/50 bg-[#D4AF37]/10 px-5 py-3 text-sm font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/20">
-                LinkedIn
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-[36px] border border-[#334155] bg-[#111827]/95 px-6 py-14 shadow-[0_0_140px_rgba(16,185,129,0.18)] sm:px-10">
-            <div className="pointer-events-none absolute right-6 top-8 h-40 w-40 rounded-full bg-[#10B981]/15 blur-3xl" />
-            <div className="pointer-events-none absolute left-6 bottom-8 h-28 w-28 rounded-full bg-[#34d399]/15 blur-3xl" />
-
-            <div className="relative mx-auto max-w-4xl text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#10B981]/80">CTA</p>
-              <h2 className="mt-4 text-4xl font-semibold leading-tight text-white sm:text-5xl">
-                Ready to Take Control
-                <span className="block text-[#10B981]">of Your Finances?</span>
-              </h2>
-              <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#CBD5E1]">
-                Join Wealth Growth today and begin your journey toward smarter financial management with one intelligent platform.
-              </p>
-
-              <div className="mt-10 flex justify-center">
-                <Link href="/login" className="rounded-full bg-[#10B981] px-10 py-4 text-base font-semibold text-[#020617] transition hover:bg-[#34d399]">
-                  Get Started
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <Footer />
       </main>
+      <Footer />
     </>
-  )
+  );
 }

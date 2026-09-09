@@ -1,0 +1,3 @@
+import AdminResourcePage from "../AdminResourcePage";
+type Row = Record<string, unknown>;
+export default function AdminInvestmentsPage() { return <AdminResourcePage<Row> title="Investments" eyebrow="Platform" description="Monitor investment records and portfolio values across the platform." endpoint="/api/admin/investments" columns={[{ key: "investment", label: "Investment" }, { key: "user", label: "User" }, { key: "type", label: "Type" }, { key: "invested", label: "Invested" }, { key: "currentValue", label: "Current value" }, { key: "profitLoss", label: "Profit / loss" }, { key: "createdAt", label: "Created" }]} />; }

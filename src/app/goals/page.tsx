@@ -28,6 +28,33 @@ interface Goal {
   averageMonthlyContribution?: number;
   estimatedCompletionDate?: string | null;
   createdAt: string;
+  contributions?: Contribution[];
+}
+
+interface Contribution {
+  _id: string;
+  amount: number;
+  createdAt: string;
+  note?: string;
+  isHistorical: boolean;
+  includedInGoalTotal: boolean;
+}
+
+function formatContributionDateTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date unavailable";
+  }
+
+  return date.toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
@@ -55,6 +82,10 @@ export default function GoalsPage() {
   const [contributions, setContributions] = useState<
     Record<string, string>
   >({});
+  const [contributionNotes, setContributionNotes] = useState<Record<string, string>>({});
+  const [recordingPastContribution, setRecordingPastContribution] = useState<Record<string, boolean>>({});
+  const [expandedContributionHistory, setExpandedContributionHistory] = useState<Record<string, boolean>>({});
+  const [refreshingContributionHistory, setRefreshingContributionHistory] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -187,6 +218,7 @@ export default function GoalsPage() {
 
   const handleContribution = async (goalId: string) => {
     const amount = Number(contributions[goalId]);
+    const recordOnly = recordingPastContribution[goalId] === true;
 
     if (!Number.isFinite(amount) || amount <= 0) {
       setMessage("Enter a valid contribution amount");
@@ -201,7 +233,11 @@ export default function GoalsPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ amount }),
+          body: JSON.stringify({
+            amount,
+            recordOnly,
+            note: contributionNotes[goalId] || undefined,
+          }),
         }
       );
 
@@ -214,11 +250,47 @@ export default function GoalsPage() {
 
       setGoals((current) =>
         current.map((goal) =>
-          goal._id === goalId ? data.goal : goal
+          goal._id === goalId
+            ? { ...data.goal, contributions: goal.contributions }
+            : goal
         )
       );
 
+      setRefreshingContributionHistory((current) => ({
+        ...current,
+        [goalId]: true,
+      }));
+
+      try {
+        const historyResponse = await fetch(`/api/goals/${goalId}/contributions`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const historyData = await historyResponse.json();
+
+        if (historyResponse.ok && historyData.success && Array.isArray(historyData.contributions)) {
+          setGoals((current) =>
+            current.map((goal) =>
+              goal._id === goalId
+                ? { ...goal, contributions: historyData.contributions }
+                : goal
+            )
+          );
+        }
+      } catch (historyError) {
+        console.error("Unable to refresh contribution history:", historyError);
+      } finally {
+        setRefreshingContributionHistory((current) => ({
+          ...current,
+          [goalId]: false,
+        }));
+      }
+
       setContributions((current) => ({
+        ...current,
+        [goalId]: "",
+      }));
+      setContributionNotes((current) => ({
         ...current,
         [goalId]: "",
       }));
@@ -425,10 +497,32 @@ export default function GoalsPage() {
                     key={goal._id}
                     goal={goal}
                     contribution={contributions[goal._id] || ""}
+                    contributionNote={contributionNotes[goal._id] || ""}
+                    recordOnly={recordingPastContribution[goal._id] === true}
+                    historyExpanded={expandedContributionHistory[goal._id] === true}
+                    historyRefreshing={refreshingContributionHistory[goal._id] === true}
                     onContributionChange={(value) =>
                       setContributions((current) => ({
                         ...current,
                         [goal._id]: value,
+                      }))
+                    }
+                    onContributionNoteChange={(value) =>
+                      setContributionNotes((current) => ({
+                        ...current,
+                        [goal._id]: value,
+                      }))
+                    }
+                    onRecordOnlyChange={(value) =>
+                      setRecordingPastContribution((current) => ({
+                        ...current,
+                        [goal._id]: value,
+                      }))
+                    }
+                    onHistoryToggle={() =>
+                      setExpandedContributionHistory((current) => ({
+                        ...current,
+                        [goal._id]: !current[goal._id],
                       }))
                     }
                     onContribute={() =>
@@ -507,14 +601,28 @@ function Field({
 function GoalCard({
   goal,
   contribution,
+  contributionNote,
+  recordOnly,
+  historyExpanded,
+  historyRefreshing,
   onContributionChange,
+  onContributionNoteChange,
+  onRecordOnlyChange,
   onContribute,
+  onHistoryToggle,
   onDelete,
 }: {
   goal: Goal;
   contribution: string;
+  contributionNote: string;
+  recordOnly: boolean;
+  historyExpanded: boolean;
+  historyRefreshing: boolean;
   onContributionChange: (value: string) => void;
+  onContributionNoteChange: (value: string) => void;
+  onRecordOnlyChange: (value: boolean) => void;
   onContribute: () => void;
+  onHistoryToggle: () => void;
   onDelete: () => void;
 }) {
   const progress = getGoalProgress(
@@ -530,6 +638,13 @@ function GoalCard({
     goal.targetAmount - goal.currentAmount,
     0
   );
+  const sortedContributions = [...(goal.contributions || [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const visibleContributions = historyExpanded
+    ? sortedContributions
+    : sortedContributions.slice(0, 2);
+  const olderContributionCount = Math.max(sortedContributions.length - 2, 0);
 
   return (
     <article className="rounded-[28px] border border-[#334155] bg-[#0F172A]/90 p-6">
@@ -593,6 +708,53 @@ function GoalCard({
         </span>
       </div>
 
+      <div className="mt-5 rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-white">Contribution History</h3>
+          <span className="text-xs text-[#64748B]">
+            {sortedContributions.length} record{sortedContributions.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        {historyRefreshing && (
+          <p className="mt-3 text-xs text-[#94A3B8]">Refreshing contribution history...</p>
+        )}
+
+        {sortedContributions.length > 0 ? (
+          <div className="mt-3 space-y-3">
+            {visibleContributions.map((contribution) => (
+                <div key={contribution._id} className="flex flex-col gap-1 border-b border-[#1F2937] pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <div>
+                    <p className="text-sm text-[#CBD5E1]">
+                      {formatContributionDateTime(contribution.createdAt)}
+                    </p>
+                    {contribution.isHistorical && (
+                      <span className="mt-1 inline-flex rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+                        Historical
+                      </span>
+                    )}
+                    {contribution.note && <p className="text-xs text-[#64748B]">{contribution.note}</p>}
+                  </div>
+                  <p className="text-sm font-semibold text-[#10B981]">+{formatCurrency(contribution.amount)}</p>
+                </div>
+            ))}
+            {olderContributionCount > 0 && (
+              <button
+                type="button"
+                onClick={onHistoryToggle}
+                className="text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
+              >
+                {historyExpanded
+                  ? "Hide older contributions"
+                  : `View all ${sortedContributions.length} contributions`}
+              </button>
+            )}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-[#64748B]">No contributions recorded yet.</p>
+        )}
+      </div>
+
       <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
         <div className="rounded-xl border border-[#1F2937] bg-[#111827]/70 p-3">
           <p className="text-[#64748B]">Target date</p>
@@ -626,28 +788,43 @@ function GoalCard({
         </div>
       </div>
 
-      {!goal.completed && (
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <input
-            type="number"
-            min="1"
-            value={contribution}
-            onChange={(event) =>
-              onContributionChange(event.target.value)
-            }
-            placeholder="Contribution amount"
-            className="min-w-0 flex-1 rounded-xl border border-[#334155] bg-[#111827] px-4 py-3 text-white outline-none placeholder:text-[#64748B] focus:border-[#10B981]"
-          />
-
-          <button
-            type="button"
-            onClick={onContribute}
-            className="rounded-xl border border-[#10B981]/40 bg-[#10B981]/10 px-5 py-3 font-semibold text-[#D4F2D3] transition hover:bg-[#10B981]/20"
-          >
-            Add contribution
-          </button>
+      <div className="mt-5 space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="number"
+              min="1"
+              value={contribution}
+              onChange={(event) => onContributionChange(event.target.value)}
+              placeholder="Contribution amount"
+              className="min-w-0 flex-1 rounded-xl border border-[#334155] bg-[#111827] px-4 py-3 text-white outline-none placeholder:text-[#64748B] focus:border-[#10B981]"
+            />
+            <input
+              type="text"
+              value={contributionNote}
+              onChange={(event) => onContributionNoteChange(event.target.value)}
+              placeholder="Optional note"
+              maxLength={250}
+              className="rounded-xl border border-[#334155] bg-[#111827] px-4 py-3 text-sm text-white outline-none placeholder:text-[#64748B] focus:border-[#10B981]"
+            />
+            <button
+              type="button"
+              onClick={onContribute}
+              disabled={goal.completed && !recordOnly}
+              className="rounded-xl border border-[#10B981]/40 bg-[#10B981]/10 px-5 py-3 font-semibold text-[#D4F2D3] transition hover:bg-[#10B981]/20"
+            >
+              {recordOnly ? "Save past record" : "Add contribution"}
+            </button>
+          </div>
+          <label className="flex items-center gap-2 text-xs text-[#94A3B8]">
+            <input
+              type="checkbox"
+              checked={recordOnly}
+              onChange={(event) => onRecordOnlyChange(event.target.checked)}
+              className="h-4 w-4 accent-[#10B981]"
+            />
+            This contribution is already included in the saved goal amount
+          </label>
         </div>
-      )}
     </article>
   );
 }

@@ -180,7 +180,7 @@ const Navbar = () => {
                 )}
               </div>
 
-              <NotificationBell/>
+              <NotificationBell key={user?.id ?? "desktop-guest"} userId={user?.id} />
 
               <div className="relative">
                 <button
@@ -273,7 +273,7 @@ const Navbar = () => {
               <>
                 {user?.id && (
                   <div className="relative flex justify-center py-2">
-                    <NotificationBell/>
+                    <NotificationBell key={user?.id ?? "mobile-guest"} userId={user?.id} />
                   </div>
                 )}
                 <div className="rounded-2xl border border-[#10B981]/20 bg-[#10B981]/10 px-4 py-3 text-sm text-[#D4F2D3]">

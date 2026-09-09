@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import Goal from "@/models/Goal";
+import Contribution from "@/models/Contribution";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
 import { recordActivity } from "@/lib/activity/recordActivity";
@@ -32,6 +34,8 @@ export async function POST(
     const { id } = await context.params;
     const body = await request.json();
     const amount = Number(body.amount);
+    const note = typeof body.note === "string" ? body.note.trim() : undefined;
+    const isHistorical = body.recordOnly === true;
 
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json(
@@ -43,40 +47,90 @@ export async function POST(
       );
     }
 
-    await connectDB();
-
-    const goal = await Goal.findOne({
-      _id: id,
-      userId,
-    });
-
-    if (!goal) {
+    if (note && note.length > 250) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Goal not found",
-        },
-        { status: 404 }
+        { success: false, message: "Contribution note is too long" },
+        { status: 400 }
       );
     }
 
-    goal.currentAmount = Math.min(
-      goal.currentAmount + amount,
-      goal.targetAmount
-    );
+    await connectDB();
 
-    goal.completed =
-      goal.currentAmount >= goal.targetAmount;
+    if (!mongoose.isValidObjectId(id)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid goal" },
+        { status: 400 }
+      );
+    }
 
-    await goal.save();
+    const dbSession = await mongoose.startSession();
+    try {
+      await dbSession.withTransaction(async () => {
+        const goal = await Goal.findOne({ _id: id, userId }).session(dbSession);
+
+        if (!goal) {
+          throw new Error("GOAL_NOT_FOUND");
+        }
+
+        if (!isHistorical && amount > Math.max(goal.targetAmount - goal.currentAmount, 0)) {
+          throw new Error("CONTRIBUTION_EXCEEDS_TARGET");
+        }
+
+        if (!isHistorical) {
+          goal.currentAmount += amount;
+          goal.completed = goal.currentAmount >= goal.targetAmount;
+          await goal.save({ session: dbSession });
+        }
+
+        await Contribution.create([{
+          goalId: goal._id,
+          userId,
+          amount,
+          note,
+          isHistorical,
+          includedInGoalTotal: true,
+        }], { session: dbSession });
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "GOAL_NOT_FOUND") {
+        return NextResponse.json(
+          { success: false, message: "Goal not found" },
+          { status: 404 }
+        );
+      }
+
+      if (error instanceof Error && error.message === "CONTRIBUTION_EXCEEDS_TARGET") {
+        return NextResponse.json(
+          { success: false, message: "Contribution cannot exceed the remaining goal amount" },
+          { status: 400 }
+        );
+      }
+
+      throw error;
+    } finally {
+      await dbSession.endSession();
+    }
+
+    const savedGoal = await Goal.findOne({ _id: id, userId });
+    const savedContribution = await Contribution.findOne({
+      goalId: id,
+      userId,
+    }).sort({ createdAt: -1 });
+
+    if (!savedGoal || !savedContribution) {
+      return NextResponse.json(
+        { success: false, message: "Unable to create contribution" },
+        { status: 500 }
+      );
+    }
 
     await recordActivity({ userId, sessionId: session.session.id, action: "GOAL_CONTRIBUTED" });
 
     const progress =
-      goal.targetAmount > 0
+      savedGoal.targetAmount > 0
         ? Math.min(
             Math.round(
-              (goal.currentAmount / goal.targetAmount) * 100
+              (savedGoal.currentAmount / savedGoal.targetAmount) * 100
             ),
             100
           )
@@ -85,9 +139,10 @@ export async function POST(
     return NextResponse.json({
       success: true,
       goal: {
-        ...goal.toObject(),
+        ...savedGoal.toObject(),
         progress,
       },
+      contribution: savedContribution,
     });
   } catch (error) {
     console.error(

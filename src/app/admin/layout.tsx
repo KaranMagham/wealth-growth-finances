@@ -2,6 +2,7 @@ import { forbidden, redirect } from "next/navigation";
 import { headers } from "next/headers";
 
 import { requireAdmin } from "@/lib/admin/requireAdmin";
+import AdminShell from "./AdminShell";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const access = await requireAdmin(await headers());
@@ -11,5 +12,5 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     forbidden();
   }
 
-  return children;
+  return <AdminShell>{children}</AdminShell>;
 }

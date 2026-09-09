@@ -1,0 +1,3 @@
+import AdminResourcePage from "../AdminResourcePage";
+type Row = Record<string, unknown>;
+export default function AdminContributionsPage() { return <AdminResourcePage<Row> title="Contributions" eyebrow="Platform" description="Review dedicated contribution records and preserve historical inclusion semantics." endpoint="/api/admin/contributions" columns={[{ key: "goal", label: "Goal" }, { key: "user", label: "User" }, { key: "amount", label: "Amount" }, { key: "note", label: "Note" }, { key: "historical", label: "Historical" }, { key: "includedInTotal", label: "Included in total" }, { key: "createdAt", label: "Created" }]} />; }

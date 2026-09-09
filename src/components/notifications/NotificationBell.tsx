@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import Link from "next/link";
 
@@ -17,7 +17,7 @@ type NotificationsResponse = {
     unreadCount: number;
 };
 
-export default function NotificationBell() {
+export default function NotificationBell({ userId }: { userId?: string }) {
     const [open, setOpen] = useState(false);
     const [data, setData] = useState<NotificationsResponse>({
         notifications: [],
@@ -25,9 +25,11 @@ export default function NotificationBell() {
     });
     const [loading, setLoading] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const loadingRef = useRef(false);
 
-    async function loadNotifications() {
-        if (loading) return;
+    const loadNotifications = useCallback(async () => {
+        if (loadingRef.current) return;
+        loadingRef.current = true;
         setLoading(true);
         try {
             const response = await fetch("/api/notifications?limit=20", {
@@ -40,9 +42,10 @@ export default function NotificationBell() {
         } catch (error: unknown) {
             console.error("Failed to load notifications", error);
         } finally {
+            loadingRef.current = false;
             setLoading(false);
         }
-    }
+    }, []);
 
     async function markAsRead(id: string) {
         const notification = data.notifications.find((item) => item._id === id);
@@ -86,6 +89,16 @@ export default function NotificationBell() {
         setOpen(nextOpen);
         if (nextOpen) void loadNotifications();
     }
+
+    useEffect(() => {
+        if (!userId) return;
+
+        const timer = window.setTimeout(() => {
+            void loadNotifications();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [userId, loadNotifications]);
 
     // Close on outside click
     useEffect(() => {

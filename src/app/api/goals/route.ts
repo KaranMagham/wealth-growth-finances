@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Goal from "@/models/Goal";
+import Contribution from "@/models/Contribution";
 import { connectDB } from "@/lib/mongodb";
 import { auth } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications/createNotification";
@@ -77,8 +78,16 @@ export async function GET(request: NextRequest) {
         }
         // --------------------------------------
 
+        const contributions = await Contribution.find({
+          goalId: goal._id,
+          userId,
+        })
+          .sort({ createdAt: -1 })
+          .lean();
+
         return {
           ...goal.toObject(),
+          contributions,
           progress,
           completed: progress >= 100,
         };

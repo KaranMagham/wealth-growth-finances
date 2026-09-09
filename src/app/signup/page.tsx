@@ -321,7 +321,7 @@ export default function SignUpPage() {
                       type="text"
                       value={fullName}
                       onChange={(event) => setFullName(event.target.value)}
-                      placeholder="Karan Magham"
+                      placeholder="Enter your full name"
                       className="w-full rounded-3xl border border-[#334155] bg-[#111827] px-4 py-3 text-sm text-white outline-none transition focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20"
                     />
                   </div>
@@ -332,7 +332,7 @@ export default function SignUpPage() {
                       type="email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
-                      placeholder="karan@example.com"
+                      placeholder="Enter your email"
                       className="w-full rounded-3xl border border-[#334155] bg-[#111827] px-4 py-3 text-sm text-white outline-none transition focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20"
                     />
                     {email.length > 0 && !emailValid && (

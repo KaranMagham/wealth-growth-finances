@@ -908,7 +908,7 @@ export default function DashboardPage() {
                 </p>
 
                 <Link
-                  href="/investments/new"
+                  href="/investments"
                   className="mt-4 inline-flex rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#34D399]"
                 >
                   Add investment
@@ -1003,7 +1003,7 @@ export default function DashboardPage() {
                 </p>
 
                 <Link
-                  href="/investments/new"
+                  href="/investments"
                   className="mt-3 inline-flex text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
                 >
                   Add your first investment

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:wealth-assistant": "tsx scripts/wealth-assistant-cases.mjs"
+    "test:wealth-assistant": "tsx scripts/wealth-assistant-cases.mjs",
+    "test:contributions": "node --test scripts/contribution-cases.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",

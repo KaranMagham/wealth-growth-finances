@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     BadgeCheck,
@@ -27,6 +27,9 @@ export default function ProfilePage() {
     const router = useRouter();
     const [user, setUser] = useState<SessionUser | null>(null);
     const [loading, setLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -68,6 +71,45 @@ export default function ProfilePage() {
 
     const initial = (user.name || user.email || "U").charAt(0).toUpperCase();
 
+    async function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file) return;
+
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+            setMessage("Choose a JPEG, PNG, or WebP image.");
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            setMessage("Profile images must be smaller than 2 MB.");
+            return;
+        }
+
+        setUploading(true);
+        setMessage(null);
+        try {
+            const formData = new FormData();
+            formData.append("image", file);
+            const response = await fetch("/api/profile/image", {
+                method: "POST",
+                body: formData,
+                credentials: "include",
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                setMessage(data.message || "Unable to update profile image.");
+                return;
+            }
+            setUser((current) => current ? { ...current, image: URL.createObjectURL(file) } : current);
+            setMessage("Profile image updated.");
+        } catch {
+            setMessage("Unable to update profile image.");
+        } finally {
+            setUploading(false);
+        }
+    }
+
     return (
         <>
             <Navbar />
@@ -96,6 +138,13 @@ export default function ProfilePage() {
                                         <BadgeCheck className="h-3.5 w-3.5 text-[#0F172A]" />
                                     </span>
                                 )}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={handleImageChange}
+                                    className="sr-only"
+                                />
                             </div>
 
                             <div>
@@ -110,7 +159,18 @@ export default function ProfilePage() {
                                     {user.email}
                                 </p>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="rounded-xl border border-[#10B981]/40 bg-[#10B981]/10 px-3 py-2 text-sm font-semibold text-[#6EE7B7] transition hover:bg-[#10B981]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {uploading ? "Uploading..." : "Change Profile Image"}
+                            </button>
                         </div>
+
+                        {message && <p className="relative mt-4 text-sm text-[#CBD5E1]">{message}</p>}
                     </section>
 
                     {/* Details card */}

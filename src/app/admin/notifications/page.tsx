@@ -1,0 +1,3 @@
+import AdminResourcePage from "../AdminResourcePage";
+type Row = Record<string, unknown>;
+export default function AdminNotificationsPage() { return <AdminResourcePage<Row> title="Notifications" eyebrow="Platform" description="Monitor in-app notification types, delivery state, and read state." endpoint="/api/admin/notifications" columns={[{ key: "title", label: "Notification" }, { key: "user", label: "User" }, { key: "type", label: "Type" }, { key: "severity", label: "Severity" }, { key: "status", label: "Delivery" }, { key: "read", label: "Read state" }, { key: "createdAt", label: "Created" }]} />; }
