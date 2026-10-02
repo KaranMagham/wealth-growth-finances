@@ -98,6 +98,7 @@ export default function SignUpPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [emailFocused, setEmailFocused] = useState(false)
   const [status, setStatus] = useState<FormStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -332,9 +333,16 @@ export default function SignUpPage() {
                       type="email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
+                      onFocus={() => setEmailFocused(true)}
+                      onBlur={() => setEmailFocused(false)}
                       placeholder="Enter your email"
                       className="w-full rounded-3xl border border-[#334155] bg-[#111827] px-4 py-3 text-sm text-white outline-none transition focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20"
                     />
+                    {emailFocused && email.length > 0 && (
+                      <p className="text-xs text-[#A7F3D0]">
+                        Please use an email address you can access and verify.
+                      </p>
+                    )}
                     {email.length > 0 && !emailValid && (
                       <p className="text-xs text-rose-300">Enter a valid email address.</p>
                     )}
