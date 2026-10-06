@@ -227,12 +227,20 @@ Create a `.env.local` file and add the required API keys.
 ```env
 MONGODB_URI=
 
-NEXTAUTH_SECRET=
+BETTER_AUTH_URL=http://localhost:3000
+
+BETTER_AUTH_SECRET=
+
+ADMIN_USER_ID=
 
 OPENAI_API_KEY=
 
 ALPHA_VANTAGE_API_KEY=
 ```
+
+For a deployed environment, set `BETTER_AUTH_URL` to the exact public URL of the deployment and set `ADMIN_USER_ID` to the MongoDB user `_id` of the account that should access `/admin`. These values must be configured in the hosting provider's server-side environment variables before redeploying. `ADMIN_USER_ID` is compared to the authenticated user's ID, not their email address.
+
+If `/admin` redirects to `/login`, the session cookie is missing or invalid. If it shows an access-denied page, verify that `ADMIN_USER_ID` exactly matches the signed-in user's ID. For API-backed admin panes, `/api/admin/*` returns `401` for a missing session and `403` for a missing or mismatched `ADMIN_USER_ID`.
 
 ## Start the Development Server
 
