@@ -9,8 +9,17 @@ if (!uri) {
   throw new Error("Please define MONGODB_URI");
 }
 
-const client = new MongoClient(uri);
-const db = await client.connect().then((connection) => connection.db());
+declare global {
+  // Keep one MongoClient across hot reloads in development.
+  var betterAuthMongoClient: MongoClient | undefined;
+}
+
+const client =
+  global.betterAuthMongoClient ??
+  new MongoClient(uri);
+
+global.betterAuthMongoClient = client;
+const db = client.db();
 
 const trustedOrigins = [
   "http://localhost:3000",

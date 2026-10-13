@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
-import NotificationPreference from "@/models/NotificationPreference";
+import Notification from "@/models/Notification";
 import { getAuthenticatedUserId } from "@/lib/notifications/getAuthenticatedUserId";
 
 export async function PATCH(request: NextRequest) {
@@ -19,52 +19,33 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const body: unknown = await request.json();
-
-    if (
-      typeof body !== "object" ||
-      body === null ||
-      Array.isArray(body)
-    ) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
-    }
-
     await connectDB();
 
-    const updates = body as Record<string, unknown>;
-
-    delete updates.userId;
-    delete updates._id;
-    delete updates.createdAt;
-    delete updates.updatedAt;
-
-    const preferences =
-      await NotificationPreference.findOneAndUpdate(
-        { userId },
-        {
-          $set: updates,
-          $setOnInsert: { userId },
+    const result = await Notification.updateMany(
+      {
+        userId: new mongoose.Types.ObjectId(userId),
+        isRead: false,
+      },
+      {
+        $set: {
+          isRead: true,
+          readAt: new Date(),
         },
-        {
-          new: true,
-          upsert: true,
-          setDefaultsOnInsert: true,
-          runValidators: true,
-        }
-      ).lean();
+      }
+    );
 
-    return NextResponse.json({ preferences });
+    return NextResponse.json({
+      success: true,
+      updatedCount: result.modifiedCount,
+    });
   } catch (error: unknown) {
     console.error(
-      "Failed to update notification preferences",
+      "Failed to mark all notifications as read",
       error
     );
 
     return NextResponse.json(
-      { error: "Failed to update preferences" },
+      { error: "Failed to mark notifications as read" },
       { status: 500 }
     );
   }

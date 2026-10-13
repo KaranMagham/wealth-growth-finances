@@ -56,6 +56,7 @@ export async function getWealthAssistantContextForPeriod(
   const months = Math.max(1, analysis.incomeExpenseTrend.length);
 
   const context = buildFinancialContext({
+    availableBalance: analysis.summary.accountBalance,
     averageMonthlyIncome: analysis.summary.income / months,
     averageMonthlyExpenses: analysis.summary.expenses / months,
     averageMonthlySavings: analysis.summary.savings / months,

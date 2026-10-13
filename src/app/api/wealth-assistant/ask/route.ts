@@ -25,6 +25,10 @@ import {
   matchQuestionScenario,
 } from "@/lib/wealth-assistant/questionLibrary";
 import { understandConversation } from "@/lib/wealth-assistant/understandConversation";
+import {
+  hasFinancialData,
+  NO_FINANCIAL_DATA_MESSAGE,
+} from "@/lib/wealth-assistant/noFinancialDataMessage";
 import WealthAssistantConversation, {
   type WealthAssistantConversationDocument,
 } from "@/models/WealthAssistantConversation";
@@ -476,6 +480,30 @@ export async function POST(request: NextRequest) {
       userId,
       question
     );
+
+    if (!hasFinancialData(context.dataStatus)) {
+      await WealthAssistantMessage.create({
+        conversationId: activeConversation._id,
+        userId,
+        role: "assistant",
+        content: NO_FINANCIAL_DATA_MESSAGE,
+      });
+      await WealthAssistantConversation.updateOne(
+        { _id: activeConversation._id, userId },
+        { $set: { updatedAt: new Date() } }
+      );
+
+      return NextResponse.json({
+        success: true,
+        intent: "general_financial_question",
+        confidence: "high",
+        answer: NO_FINANCIAL_DATA_MESSAGE,
+        conversationId: String(activeConversation._id),
+        period: analysis.period,
+        aiGenerated: false,
+        webSearchUsed: false,
+      });
+    }
 
     const understanding = await understandConversation({
       question,

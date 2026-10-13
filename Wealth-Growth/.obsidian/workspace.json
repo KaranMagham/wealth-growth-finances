@@ -11,26 +11,6 @@
             "id": "450255b0e4243bd5",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Welcome.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Welcome"
-            }
-          }
-        ]
-      },
-      {
-        "id": "ccfb816c4e911cc8",
-        "type": "tabs",
-        "children": [
-          {
-            "id": "29f051560e65c4d4",
-            "type": "leaf",
-            "state": {
               "type": "graph",
               "state": {},
               "icon": "lucide-git-fork",
@@ -204,8 +184,9 @@
       "bases:Create new base": false
     }
   },
-  "active": "450255b0e4243bd5",
+  "active": "1a68a6b8d43c38ff",
   "lastOpenFiles": [
+    "Untitled",
     "Welcome.md"
   ]
 }

@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
 import type { FinancialContext } from "./buildFinancialContext";
 import type { ConversationHistoryItem } from "./conversationContext";
@@ -63,20 +63,25 @@ export async function understandConversation(
 ): Promise<ConversationUnderstanding | null> {
   if (
     process.env.AI_ENABLED !== "true" ||
-    !process.env.OPENAI_API_KEY
+    !process.env.GEMINI_API_KEY
   ) {
     return null;
   }
 
-  try {
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
 
-    const response = await client.responses.create(
-      {
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-        instructions: `
+  try {
+    const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await client.models.generateContent({
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      contents: JSON.stringify({
+        currentQuestion: input.question,
+        recentConversation: input.conversationHistory,
+        financialContext: input.financialContext,
+      }),
+      config: {
+        systemInstruction: `
 You classify the current message for Wealth Growth, a personal finance assistant.
 Use the current question, recent conversation, and financial context together.
 Return JSON only with these fields:
@@ -105,18 +110,15 @@ Rules:
 - Do not invent values. Use null when a value is not present or cannot be resolved.
 - Preserve exact numeric meaning. For example, "7 lakh 50 thousand" is 750000 and "after 4 months" is goalMonths 4.
 `,
-        input: JSON.stringify({
-          currentQuestion: input.question,
-          recentConversation: input.conversationHistory,
-          financialContext: input.financialContext,
-        }),
+        abortSignal: controller.signal,
       },
-      { timeout: 15_000, maxRetries: 0 }
-    );
+    });
 
-    return parseOutput(response.output_text || "");
+    return parseOutput(response.text || "");
   } catch (error) {
     console.error("Conversation understanding failed:", error);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }

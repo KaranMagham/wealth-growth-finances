@@ -4,6 +4,10 @@ import { getConversationFacts, isFinanceRelated, resolveConversationIntent, reso
 import { calculateAffordability } from "../src/lib/wealth-assistant/calculateAffordability.ts";
 import { getConversationTitle } from "../src/lib/wealth-assistant/conversationTitle.ts";
 import {
+  hasFinancialData,
+  NO_FINANCIAL_DATA_MESSAGE,
+} from "../src/lib/wealth-assistant/noFinancialDataMessage.ts";
+import {
   buildScenarioAnswer,
   matchQuestionScenario,
   QUESTION_LIBRARY,
@@ -202,5 +206,22 @@ assert.equal(calculateAffordability({
   existingBudgetCommitments: 0,
   currentInvestments: 0,
 }).cashAfterPurchase, null);
+assert.equal(
+  hasFinancialData({
+    hasTransactions: false,
+    hasBudgets: false,
+    hasGoals: false,
+    hasInvestments: false,
+  }),
+  false
+);
+assert.match(
+  NO_FINANCIAL_DATA_MESSAGE,
+  /could not find any recorded financial data/i
+);
+assert.match(
+  NO_FINANCIAL_DATA_MESSAGE,
+  /Add a transaction, budget, goal, or investment/i
+);
 
 console.log("Wealth Assistant deterministic cases passed.");

@@ -130,6 +130,7 @@ export async function getAnalysisData(
 
   const [
     transactionDocuments,
+    allTransactionDocuments,
     budgetDocuments,
     goalDocuments,
     investmentDocuments,
@@ -142,6 +143,10 @@ export async function getAnalysisData(
       },
     })
       .sort({ date: -1 })
+      .lean(),
+
+    Transaction.find({ userId })
+      .select({ type: 1, amount: 1 })
       .lean(),
 
     Budget.find({
@@ -160,6 +165,12 @@ export async function getAnalysisData(
 
   const transactions =
     transactionDocuments as unknown as TransactionRecord[];
+
+  const allTransactions =
+    allTransactionDocuments as unknown as Pick<
+      TransactionRecord,
+      "type" | "amount"
+    >[];
 
   const budgets =
     budgetDocuments as unknown as BudgetRecord[];
@@ -282,6 +293,15 @@ export async function getAnalysisData(
   }
 
   const savings = income - expenses;
+
+  const accountBalance = allTransactions.reduce(
+    (balance, transaction) =>
+      balance +
+      (transaction.type === "Income"
+        ? Number(transaction.amount) || 0
+        : -(Number(transaction.amount) || 0)),
+    0
+  );
 
   const savingsRate =
     income > 0 ? (savings / income) * 100 : 0;
@@ -745,6 +765,7 @@ export async function getAnalysisData(
       ),
 
       currentNetWorth: null,
+      accountBalance: round(accountBalance),
 
       investmentValue: round(
         investmentValue

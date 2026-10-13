@@ -144,6 +144,7 @@ export type AnalysisResponse = {
     budgetUsagePercentage: number;
 
     currentNetWorth: number | null;
+    accountBalance: number | null;
 
     investmentValue: number;
     totalInvested: number;

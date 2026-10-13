@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 
 import type { FinancialContext } from "./buildFinancialContext";
@@ -87,7 +86,7 @@ function getProviderFailureReason(error: unknown) {
   return "api_error";
 }
 
-function logProviderFailure(provider: "OpenAI" | "Gemini", error: unknown) {
+function logProviderFailure(provider: "Gemini", error: unknown) {
   console.warn("Wealth assistant provider failed", {
     provider,
     reason: getProviderFailureReason(error),
@@ -99,52 +98,6 @@ export async function generateAiSuggestion(
 ): Promise<string | null> {
   if (process.env.AI_ENABLED !== "true") {
     return null;
-  }
-
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const client = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-
-      const tools = input.useWebSearch
-        ? [
-            {
-              type: "web_search_preview" as const,
-            },
-          ]
-        : undefined;
-
-      const response = await client.responses.create(
-        {
-          model:
-            process.env.OPENAI_MODEL ||
-            "gpt-4o-mini",
-
-          instructions: WEALTH_ASSISTANT_INSTRUCTIONS,
-
-          input: buildAiInput(input),
-
-          ...(tools ? { tools } : {}),
-        },
-        {
-          timeout: 15_000,
-          maxRetries: 0,
-        }
-      );
-
-      const answer = response.output_text?.trim();
-      if (answer) {
-        return answer;
-      }
-    } catch (error) {
-      logProviderFailure("OpenAI", error);
-    }
-  } else {
-    console.warn("Wealth assistant provider unavailable", {
-      provider: "OpenAI",
-      reason: "not_configured",
-    });
   }
 
   return generateGeminiSuggestion(input);
