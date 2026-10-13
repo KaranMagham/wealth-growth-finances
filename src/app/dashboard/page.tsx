@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState, useCallback } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Briefcase, CreditCard, Landmark, Sparkles, Target, TrendingUp } from "lucide-react"
+import { ArrowRight, Plus, RefreshCw, Sparkles } from "lucide-react"
 import Navbar from "../../../components/Navbar"
-import AppFooter from "../../components/AppFooter";
-import { useSession } from "@/hooks/useSession";
-import { refreshAllInvestments } from "@/lib/api/investments";
-
+import AppFooter from "../../components/AppFooter"
+import { useSession } from "@/hooks/useSession"
+import { refreshAllInvestments } from "@/lib/api/investments"
 
 interface TransactionRecord {
   _id: string
@@ -16,47 +15,29 @@ interface TransactionRecord {
   amount: number
   category: string
   description: string
-  paymentMethod: string
   date: string
-  createdAt: string
 }
 
 interface BudgetRecord {
-  _id: string;
-  category: string;
-  limit: number;
-  spent: number;
-  remaining: number;
-  percentageUsed: number;
+  _id: string
+  category: string
+  limit: number
+  spent: number
 }
 
 interface GoalRecord {
-  _id: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  targetDate: string;
-  completed: boolean;
+  _id: string
+  name: string
+  targetAmount: number
+  currentAmount: number
+  completed: boolean
 }
 
 interface InvestmentRecord {
-  _id: string;
-  name: string;
-  type: string;
-  symbol?: string;
-  schemeCode?: string;
-  goldPurity?: "18K" | "22K" | "24K";
-  quantity: number;
-  averageBuyPrice: number;
-  currentPrice: number;
-  currentValue: number;
-  totalInvested: number;
-  profitLoss: number;
-  returnPercentage: number;
-  purchaseDate?: string;
-  createdAt?: string;
-  priceSource?: "MANUAL" | "MARKET_API";
-  priceUpdatedAt?: string;
+  _id: string
+  currentValue: number
+  totalInvested: number
+  profitLoss: number
 }
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
@@ -69,989 +50,242 @@ function formatCurrency(value: number) {
   return currencyFormatter.format(value)
 }
 
-function formatInvestmentDate(
-  investment: InvestmentRecord
-) {
-  const date =
-    investment.createdAt || investment.purchaseDate;
-
-  if (!date) {
-    return "Date unavailable";
-  }
-
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "Date unavailable";
-  }
-
-  return `Added ${parsedDate.toLocaleDateString()}`;
-}
-
 export default function DashboardPage() {
   const { status, session } = useSession()
   const router = useRouter()
   const [transactions, setTransactions] = useState<TransactionRecord[]>([])
+  const [budgets, setBudgets] = useState<BudgetRecord[]>([])
+  const [goals, setGoals] = useState<GoalRecord[]>([])
+  const [investments, setInvestments] = useState<InvestmentRecord[]>([])
   const [loading, setLoading] = useState(false)
-  const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
-  const [investments, setInvestments] = useState<
-    InvestmentRecord[]
-  >([]);
-  const [goals, setGoals] = useState<GoalRecord[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshMessage, setRefreshMessage] =
-    useState("");
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshMessage, setRefreshMessage] = useState("")
 
-  const user = session?.user
-  const displayName = user?.name || user?.email || "Investor"
+  const loadDashboardData = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true)
+    try {
+      const responses = await Promise.all([
+        fetch("/api/transactions", { credentials: "include", cache: "no-store", signal }),
+        fetch("/api/budgets", { credentials: "include", cache: "no-store", signal }),
+        fetch("/api/goals", { credentials: "include", cache: "no-store", signal }),
+        fetch("/api/investments", { credentials: "include", cache: "no-store", signal }),
+      ])
+      const payloads = await Promise.all(responses.map((response) => response.json()))
 
-  const loadDashboardData = useCallback(
-    async (signal?: AbortSignal) => {
-      setLoading(true);
-
-      try {
-        const [
-          transactionsResponse,
-          budgetsResponse,
-          goalsResponse,
-          investmentsResponse,
-        ] = await Promise.all([
-          fetch("/api/transactions", {
-            credentials: "include",
-            cache: "no-store",
-            signal,
-          }),
-          fetch("/api/budgets", {
-            credentials: "include",
-            cache: "no-store",
-            signal,
-          }),
-          fetch("/api/goals", {
-            credentials: "include",
-            cache: "no-store",
-            signal,
-          }),
-          fetch("/api/investments", {
-            credentials: "include",
-            cache: "no-store",
-            signal,
-          }),
-        ]);
-
-        const [
-          transactionsPayload,
-          budgetsPayload,
-          goalsPayload,
-          investmentsPayload,
-        ] = await Promise.all([
-          transactionsResponse.json(),
-          budgetsResponse.json(),
-          goalsResponse.json(),
-          investmentsResponse.json(),
-        ]);
-
-        if (transactionsPayload.success) {
-          setTransactions(
-            transactionsPayload.transactions || []
-          );
-        }
-
-        if (budgetsPayload.success) {
-          setBudgets(budgetsPayload.budgets || []);
-        }
-
-        if (goalsPayload.success) {
-          setGoals(goalsPayload.goals || []);
-        }
-
-        if (investmentsPayload.success) {
-          setInvestments(
-            investmentsPayload.investments || []
-          );
-        }
-
-      } catch (error) {
-        if (error instanceof DOMException &&
-          error.name === "AbortError") {
-          return;
-        }
-
-        console.error("Dashboard loading error:", error);
-      } finally {
-        if (!signal?.aborted) {
-          setLoading(false);
-        }
+      if (payloads[0].success) setTransactions(payloads[0].transactions || [])
+      if (payloads[1].success) setBudgets(payloads[1].budgets || [])
+      if (payloads[2].success) setGoals(payloads[2].goals || [])
+      if (payloads[3].success) setInvestments(payloads[3].investments || [])
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error("Dashboard loading error:", error)
       }
-    },
-    []
-  );
+    } finally {
+      if (!signal?.aborted) setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login");
-      return;
+      router.replace("/login")
+      return
     }
+    if (status !== "authenticated") return
 
-    if (status !== "authenticated") {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      void loadDashboardData();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [status, router, loadDashboardData]);
+    const timer = window.setTimeout(() => void loadDashboardData(), 0)
+    return () => window.clearTimeout(timer)
+  }, [status, router, loadDashboardData])
 
   const stats = useMemo(() => {
-    const income = transactions.reduce(
-      (sum, item) => sum + (item.type === "Income" ? item.amount : 0),
-      0
-    );
-
-    const expense = transactions.reduce(
-      (sum, item) => sum + (item.type === "Expense" ? item.amount : 0),
-      0
-    );
-
-    const balance = income - expense;
-    const savings = Math.max(balance, 0);
-
-    const savingsRate =
-      income > 0 ? Math.round((balance / income) * 100) : 0;
-
-    const expenseRatio =
-      income > 0 ? Math.round((expense / income) * 100) : 0;
-
-    const savingsScore = Math.max(
-      0,
-      Math.min(savingsRate * 2, 100)
-    );
-
-    const expenseScore = Math.max(
-      0,
-      Math.min(100 - expenseRatio, 100)
-    );
-
-    const healthScore =
-      income > 0
-        ? Math.round(savingsScore * 0.6 + expenseScore * 0.4)
-        : 0;
-
-    const healthLabel =
-      healthScore >= 90
-        ? "Excellent"
-        : healthScore >= 75
-          ? "Good"
-          : healthScore >= 60
-            ? "Average"
-            : "Needs work";
-
-    const healthMessage =
-      healthScore >= 90
-        ? "Your savings and spending habits are very strong."
-        : healthScore >= 75
-          ? "You are building a healthy financial foundation."
-          : healthScore >= 60
-            ? "Your finances are stable, but there is room to improve."
-            : "Reduce expenses and increase your monthly savings.";
-
+    const income = transactions.reduce((sum, item) => sum + (item.type === "Income" ? item.amount : 0), 0)
+    const expense = transactions.reduce((sum, item) => sum + (item.type === "Expense" ? item.amount : 0), 0)
+    const balance = income - expense
+    const savings = Math.max(balance, 0)
+    const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0
+    const expenseRatio = income > 0 ? Math.round((expense / income) * 100) : 0
+    const healthScore = income > 0
+      ? Math.round(Math.max(savingsRate * 2, 0) * 0.6 + Math.max(100 - expenseRatio, 0) * 0.4)
+      : 0
+    const healthLabel = healthScore >= 90 ? "Excellent" : healthScore >= 75 ? "Good" : healthScore >= 60 ? "Average" : "Needs work"
     const recentTransactions = [...transactions]
-      .sort(
-        (a, b) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-      .slice(0, 5);
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 3)
 
-    return {
-      income,
-      expense,
-      balance,
-      savings,
-      savingsRate,
-      expenseRatio,
-      healthScore,
-      healthLabel,
-      healthMessage,
-      recentTransactions,
-    };
-  }, [transactions]);
+    return { income, expense, balance, savings, savingsRate, healthScore, healthLabel, recentTransactions }
+  }, [transactions])
 
-  const investmentTotals = useMemo(() => {
-    return investments.reduce(
+  const investmentTotals = useMemo(
+    () => investments.reduce(
       (totals, investment) => ({
-        invested:
-          totals.invested + investment.totalInvested,
-        current:
-          totals.current + investment.currentValue,
-        profitLoss:
-          totals.profitLoss + investment.profitLoss,
+        invested: totals.invested + investment.totalInvested,
+        current: totals.current + investment.currentValue,
+        profitLoss: totals.profitLoss + investment.profitLoss,
       }),
-      {
-        invested: 0,
-        current: 0,
-        profitLoss: 0,
-      }
-    );
-  }, [investments]);
+      { invested: 0, current: 0, profitLoss: 0 },
+    ),
+    [investments],
+  )
 
-  const portfolioReturnPercentage =
-    investmentTotals.invested > 0
-      ? (investmentTotals.profitLoss /
-        investmentTotals.invested) *
-      100
-      : 0;
+  const totalNetWorth = stats.balance + investmentTotals.current
+  const allocatedGoalAmount = goals.reduce((sum, goal) => sum + goal.currentAmount, 0)
+  const availableCash = Math.max(totalNetWorth - allocatedGoalAmount, 0)
+  const totalBudget = budgets.reduce((sum, budget) => sum + budget.limit, 0)
+  const totalBudgetSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0)
+  const budgetUsage = totalBudget > 0 ? Math.min(Math.round((totalBudgetSpent / totalBudget) * 100), 100) : 0
+  const activeGoals = goals.filter((goal) => !goal.completed)
+  const goalProgress = activeGoals.length > 0
+    ? Math.round(activeGoals.reduce((sum, goal) => sum + (goal.targetAmount > 0 ? Math.min(goal.currentAmount / goal.targetAmount * 100, 100) : 0), 0) / activeGoals.length)
+    : 0
 
-  const totalNetWorth = stats.balance + investmentTotals.current;
-
-  const allocatedGoalAmount = goals.reduce(
-    (sum, goal) => sum + goal.currentAmount,
-    0
-  );
-
-  const availableCash = Math.max(
-    totalNetWorth - allocatedGoalAmount,
-    0
-  );
-
-  const investmentTypeCounts = investments.reduce<
-    Record<string, number>
-  >((counts, investment) => {
-    counts[investment.type] =
-      (counts[investment.type] || 0) + 1;
-
-    return counts;
-  }, {});
-
-  const topInvestmentTypes = Object.entries(
-    investmentTypeCounts
-  ).sort(([, countA], [, countB]) => countB - countA);
-
-  const kpis = [
-    {
-      label: "Cash Balance",
-      value: formatCurrency(stats.balance),
-      hint:
-        stats.balance >= 0
-          ? "Positive balance from your activity"
-          : "Spending is above income",
-    },
-    { label: "Income", value: formatCurrency(stats.income), hint: "Total income recorded" },
-    { label: "Expense", value: formatCurrency(stats.expense), hint: "Total expense recorded" },
-    { label: "Savings Rate", value: `${stats.savingsRate}%`, hint: stats.savingsRate >= 0 ? "Healthy monthly pace" : "Adjust spending to improve savings" },
-  ]
-
-  const summaryRows = [
-    { label: "Income", value: formatCurrency(stats.income), tone: "text-[#10B981]" },
-    { label: "Expense", value: formatCurrency(stats.expense), tone: "text-rose-400" },
-    { label: "Balance", value: formatCurrency(stats.balance), tone: stats.balance >= 0 ? "text-[#10B981]" : "text-amber-400" },
-    { label: "Savings", value: formatCurrency(stats.savings), tone: "text-[#10B981]" },
-  ]
-
-  const totalBudget = budgets.reduce(
-    (sum, budget) => sum + budget.limit,
-    0
-  );
-
-  const totalBudgetSpent = budgets.reduce(
-    (sum, budget) => sum + budget.spent,
-    0
-  );
-
-  const budgetUsage =
-    totalBudget > 0
-      ? Math.min(
-        Math.round((totalBudgetSpent / totalBudget) * 100),
-        100
-      )
-      : 0;
-
-  const activeGoals = goals.filter((goal) => !goal.completed);
-
-  const closestGoal = activeGoals
-    .map((goal) => ({
-      ...goal,
-      progress:
-        goal.targetAmount > 0
-          ? Math.min(
-            Math.round(
-              (goal.currentAmount / goal.targetAmount) * 100
-            ),
-            100
-          )
-          : 0,
-    }))
-    .sort((a, b) => b.progress - a.progress)[0];
+  async function handleRefreshPrices() {
+    try {
+      setRefreshing(true)
+      setRefreshMessage("")
+      const result = await refreshAllInvestments()
+      setRefreshMessage(result.failedCount > 0
+        ? `Updated ${result.updatedCount}; ${result.failedCount} failed.`
+        : `Updated ${result.updatedCount} investment(s).`)
+      await loadDashboardData()
+    } catch (error) {
+      setRefreshMessage(error instanceof Error ? error.message : "Unable to refresh investment prices")
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   if (status === "loading") {
     return (
       <>
         <Navbar />
-        <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),linear-gradient(135deg,#020617_0%,#0F172A_60%,#111827_100%)] text-white">
-          <p className="text-[#94A3B8]">Loading your dashboard...</p>
-        </main>
+        <main className="flex min-h-screen items-center justify-center bg-[#020617] text-[#94A3B8]">Loading your dashboard...</main>
       </>
     )
   }
 
-  const latestInvestments = [...investments]
-    .sort((a, b) => {
-      const dateA = a.createdAt || a.purchaseDate;
-      const dateB = b.createdAt || b.purchaseDate;
-
-      const timeA = dateA
-        ? new Date(dateA).getTime()
-        : 0;
-
-      const timeB = dateB
-        ? new Date(dateB).getTime()
-        : 0;
-
-      return timeB - timeA;
-    })
-    .slice(0, 3);
-
-  async function handleRefreshPrices() {
-    try {
-      setRefreshing(true);
-      setRefreshMessage("");
-
-      const result = await refreshAllInvestments();
-
-      setRefreshMessage(
-        result.failedCount > 0
-          ? `Updated ${result.updatedCount} investment(s). ${result.failedCount} failed.`
-          : `Updated ${result.updatedCount} investment(s).`
-      );
-
-      await loadDashboardData();
-    } catch (error) {
-      setRefreshMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to refresh investment prices"
-      );
-    } finally {
-      setRefreshing(false);
+  const displayName = session?.user?.name || session?.user?.email || "Investor"
+  const insight = budgets.length > 0 && budgetUsage >= 80
+    ? {
+      title: budgetUsage >= 100 ? "Budget limit reached" : "Budget needs attention",
+      text: `${budgetUsage}% of your budget is used. Review your spending before the month ends.`,
+      href: "/budgets",
+      action: "Review budgets",
     }
-  }
+    : stats.income > 0 && stats.savingsRate > 0
+      ? {
+        title: "Savings are moving in the right direction",
+        text: `You have saved ${formatCurrency(stats.savings)} from recorded income this month.`,
+        href: "/analysis",
+        action: "View analysis",
+      }
+      : {
+        title: "Build your financial picture",
+        text: "Add transactions, budgets, or goals to unlock personalized financial insights.",
+        href: "/transactions",
+        action: "Add a transaction",
+      }
+
+  const kpis = [
+    ["Total net worth", formatCurrency(totalNetWorth), "Cash plus investments"],
+    ["Available cash", formatCurrency(availableCash), "After goal allocations"],
+    ["Monthly income", formatCurrency(stats.income), "Recorded income"],
+    ["Monthly expenses", formatCurrency(stats.expense), "Recorded spending"],
+  ]
 
   return (
     <>
       <Navbar />
-
-      <main className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),linear-gradient(135deg,#020617_0%,#0F172A_60%,#111827_100%)] text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <section className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_50px_rgba(16,185,129,0.12)] sm:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/40 bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#D4F2D3]">
-                      <Sparkles className="h-4 w-4 text-[#10B981]" />
-                      Welcome back
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={handleRefreshPrices}
-                        disabled={refreshing}
-                        className="rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#34D399] disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {refreshing
-                          ? "Refreshing prices..."
-                          : "Refresh prices"}
-                      </button>
-
-                      {refreshMessage && (
-                        <p className="text-sm text-[#94A3B8]">
-                          {refreshMessage}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <h1 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">Welcome, {displayName}</h1>
-                  <p className="mt-3 max-w-xl text-sm leading-7 text-[#94A3B8] sm:text-base">
-                    Your financial snapshot is based on your latest transactions and updates automatically as you add new entries.
-                  </p>
-                </div>
-                <div className="grid w-full gap-3 sm:grid-cols-2">
-                  <div className="rounded-3xl border border-[#10B981]/30 bg-[#10B981]/10 px-5 py-4 text-left">
-                    <p className="text-sm text-[#D4F2D3]">Total Net Worth</p>
-                    <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(totalNetWorth)}</p>
-                    <p className="mt-2 text-xs text-[#94A3B8]">Total value of your financial position</p>
-                  </div>
-                  <div className="rounded-3xl border border-[#38BDF8]/30 bg-[#38BDF8]/10 px-5 py-4 text-left">
-                    <p className="text-sm text-[#BAE6FD]">Available Cash</p>
-                    <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(availableCash)}</p>
-                    <p className="mt-2 text-xs text-[#94A3B8]">Cash available after goal allocations</p>
-                  </div>
-                </div>
-              </div>
-
-            </section>
-
-            <aside className="rounded-[32px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)] sm:p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-2xl border border-[#10B981]/30 bg-[#10B981]/10 p-3 text-[#10B981]">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-white">Quick insight</h2>
-                  <p className="text-sm text-[#94A3B8]">Your latest transactions show a {stats.balance >= 0 ? "positive" : "negative"} balance trend.</p>
-                </div>
-              </div>
-
-              <div className="mt-6 space-y-3">
-                <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[#E2E8F0]">
-                    <Target className="h-4 w-4 text-[#10B981]" />
-                    Savings
-                  </div>
-                  <p className="mt-2 text-2xl font-semibold text-white">{formatCurrency(stats.savings)}</p>
-                  <p className="mt-1 text-sm text-[#94A3B8]">Amount left after expenses.</p>
-                </div>
-                <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[#E2E8F0]">
-                    <Briefcase className="h-4 w-4 text-[#10B981]" />
-                    Expense Ratio
-                  </div>
-                  <p className="mt-2 text-2xl font-semibold text-white">{stats.income > 0 ? `${Math.round((stats.expense / stats.income) * 100)}%` : "0%"}</p>
-                  <p className="mt-1 text-sm text-[#94A3B8]">Based on your recorded spending.</p>
-                </div>
-              </div>
-            </aside>
-          </div>
-
-
-          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-            {kpis.map((item) => (
-              <div key={item.label} className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_25px_rgba(16,185,129,0.08)]">
-                <p className="text-sm text-[#94A3B8]">{item.label}</p>
-                <p className="mt-3 text-2xl font-semibold text-white">{item.value}</p>
-                <p className="mt-2 text-sm text-[#10B981]">{item.hint}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-[#94A3B8]">
-                <CreditCard className="h-4 w-4 text-[#10B981]" />
-                Monthly Flow
-              </div>
-              <div className="mt-5 grid gap-3 grid-cols-1 sm:grid-cols-2">
-                {summaryRows.map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
-                    <p className="text-sm text-[#94A3B8]">{item.label}</p>
-                    <p className={`mt-2 text-xl font-semibold ${item.tone}`}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
+      <main className="min-h-screen overflow-x-hidden bg-[#020617] text-white">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <header className="flex flex-col gap-4 border-b border-[#1E293B] pb-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#10B981]">Financial overview</p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Welcome back, {displayName}</h1>
+              <p className="mt-1 text-sm text-[#94A3B8]">Here is what needs your attention today.</p>
             </div>
-
-            <div className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-[#94A3B8]">
-                  <Landmark className="h-4 w-4 text-[#10B981]" />
-                  Financial Health
-                </div>
-
-                <div className="rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-1 text-xs font-semibold text-[#10B981]">
-                  {stats.healthLabel}
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-5">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-[#94A3B8]">
-                      Overall score
-                    </p>
-
-                    <p className="mt-1 text-4xl font-semibold text-white">
-                      {stats.healthScore}
-                      <span className="text-lg text-[#64748B]"> / 100</span>
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-xs uppercase tracking-wider text-[#64748B]">
-                      Score band
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#10B981]">
-                      {stats.healthScore >= 90
-                        ? "Excellent"
-                        : stats.healthScore >= 75
-                          ? "Good"
-                          : stats.healthScore >= 60
-                            ? "Average"
-                            : "Needs work"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 h-3 overflow-hidden rounded-full bg-[#1F2937]">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] via-[#10B981] to-[#34D399] transition-all duration-500"
-                    style={{ width: `${stats.healthScore}%` }}
-                    role="progressbar"
-                    aria-valuenow={stats.healthScore}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label="Financial health score"
-                  />
-                </div>
-
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-[#1F2937] bg-[#0F172A] p-3">
-                    <p className="text-xs text-[#64748B]">Savings rate</p>
-                    <p className="mt-1 text-lg font-semibold text-[#10B981]">
-                      {stats.savingsRate}%
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-[#1F2937] bg-[#0F172A] p-3">
-                    <p className="text-xs text-[#64748B]">Expense ratio</p>
-                    <p className="mt-1 text-lg font-semibold text-rose-400">
-                      {stats.expenseRatio}%
-                    </p>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-sm leading-6 text-[#94A3B8]">
-                  {stats.healthMessage}
-                </p>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/transactions" className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#111827] px-3 py-2 text-sm font-semibold transition hover:border-[#10B981] focus:outline-none focus:ring-2 focus:ring-[#10B981]">
+                <Plus className="h-4 w-4 text-[#10B981]" /> Add transaction
+              </Link>
+              <Link href="/investments" className="inline-flex items-center gap-2 rounded-lg bg-[#10B981] px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#34D399] focus:outline-none focus:ring-2 focus:ring-[#6EE7B7]">
+                <Plus className="h-4 w-4" /> Add investment
+              </Link>
+              {investments.length > 0 && (
+                <button type="button" onClick={handleRefreshPrices} disabled={refreshing} className="inline-flex items-center gap-2 rounded-lg border border-[#334155] px-3 py-2 text-sm font-semibold text-[#CBD5E1] transition hover:border-[#10B981] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#10B981]">
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> {refreshing ? "Refreshing" : "Refresh prices"}
+                </button>
+              )}
             </div>
-          </div>
+          </header>
+          {refreshMessage && <p className="mt-3 text-right text-xs text-[#94A3B8]" role="status">{refreshMessage}</p>}
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <section className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-semibold text-white">
-                    Budget Progress
-                  </h2>
-                  <p className="mt-1 text-sm text-[#94A3B8]">
-                    Current spending across your budgets
-                  </p>
+          <section aria-labelledby="summary-heading" className="mt-6">
+            <h2 id="summary-heading" className="sr-only">Financial summary</h2>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {kpis.map(([label, value, hint]) => (
+                <div key={label} className="rounded-xl border border-[#1E293B] bg-[#0F172A] p-4">
+                  <p className="text-sm text-[#94A3B8]">{label}</p>
+                  <p className="mt-2 truncate text-2xl font-semibold">{value}</p>
+                  <p className="mt-1 text-xs text-[#64748B]">{hint}</p>
                 </div>
+              ))}
+            </div>
+          </section>
 
-                <Link
-                  href="/budgets"
-                  className="text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
-                >
-                  View budgets
-                </Link>
-              </div>
+          <section aria-labelledby="health-heading" className="mt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="health-heading" className="text-lg font-semibold">Financial health</h2>
+              <span className="text-xs text-[#64748B]">{stats.healthLabel} · {stats.healthScore}/100</span>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <HealthCard label="Budget health" value={budgets.length ? `${budgetUsage}% used` : "No budgets yet"} status={budgets.length ? (budgetUsage >= 80 ? "Needs attention" : "On track") : "Get started"} progress={budgets.length ? budgetUsage : 0} href="/budgets" link="View budgets" warning={budgetUsage >= 80} />
+              <HealthCard label="Savings rate" value={stats.income > 0 ? `${stats.savingsRate}%` : "Not available"} status={stats.income > 0 ? (stats.savingsRate > 0 ? "Saving this month" : "Review spending") : "Add income"} progress={stats.income > 0 ? Math.min(Math.max(stats.savingsRate, 0), 100) : 0} href="/analysis" link="View analysis" warning={stats.income > 0 && stats.savingsRate <= 0} />
+              <HealthCard label="Goal progress" value={activeGoals.length ? `${goalProgress}% average` : "No active goals"} status={activeGoals.length ? `${activeGoals.length} active goal${activeGoals.length === 1 ? "" : "s"}` : "Get started"} progress={goalProgress} href="/goals" link="View goals" warning={false} />
+            </div>
+          </section>
 
-              <div className="mt-5">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="text-[#94A3B8]">
-                    {formatCurrency(totalBudgetSpent)} spent
-                  </span>
+          <section aria-labelledby="insight-heading" className="mt-6 flex flex-col gap-4 rounded-xl border border-[#10B981]/25 bg-[#0B1F1A] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-[#10B981]/15 p-2 text-[#34D399]"><Sparkles className="h-4 w-4" /></div>
+              <div><h2 id="insight-heading" className="font-semibold">{insight.title}</h2><p className="mt-1 text-sm text-[#A7C7BB]">{insight.text}</p></div>
+            </div>
+            <Link href={insight.href} className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[#34D399] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#10B981]">{insight.action}<ArrowRight className="h-4 w-4" /></Link>
+          </section>
 
-                  <span className="text-[#CBD5E1]">
-                    {formatCurrency(totalBudget)} limit
-                  </span>
-                </div>
-
-                <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#1F2937]">
-                  <div
-                    className={`h-full rounded-full transition-all ${budgetUsage >= 100
-                      ? "bg-rose-500"
-                      : budgetUsage >= 80
-                        ? "bg-amber-400"
-                        : "bg-[#10B981]"
-                      }`}
-                    style={{ width: `${budgetUsage}%` }}
-                  />
-                </div>
-
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[#10B981]">
-                    {budgetUsage}% used
-                  </span>
-
-                  <span className="text-sm text-[#94A3B8]">
-                    {budgets.length} budget{budgets.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-
-                {budgets.length === 0 && (
-                  <p className="mt-4 text-sm text-[#94A3B8]">
-                    Create a budget to start tracking your spending.
-                  </p>
-                )}
-              </div>
-            </section>
-
-            <section className="rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+            <section aria-labelledby="activity-heading" className="rounded-xl border border-[#1E293B] bg-[#0F172A] p-4">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-semibold text-white">
-                    Goal Progress
-                  </h2>
-                  <p className="mt-1 text-sm text-[#94A3B8]">
-                    Your closest active financial goal
-                  </p>
-                </div>
-
-                <Link
-                  href="/goals"
-                  className="text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
-                >
-                  View goals
-                </Link>
+                <div><h2 id="activity-heading" className="font-semibold">Recent activity</h2><p className="mt-1 text-xs text-[#64748B]">Your three latest transactions</p></div>
+                <Link href="/transactions" className="inline-flex items-center gap-1 text-sm font-semibold text-[#10B981] hover:text-[#34D399] focus:outline-none focus:ring-2 focus:ring-[#10B981]">View all<ArrowRight className="h-4 w-4" /></Link>
               </div>
-
-              {closestGoal ? (
-                <div className="mt-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-white">
-                        {closestGoal.name}
-                      </p>
-
-                      <p className="mt-1 text-sm text-[#94A3B8]">
-                        {formatCurrency(closestGoal.currentAmount)} of{" "}
-                        {formatCurrency(closestGoal.targetAmount)}
-                      </p>
-                    </div>
-
-                    <span className="text-lg font-semibold text-[#10B981]">
-                      {closestGoal.progress}%
-                    </span>
+              <div className="mt-4 divide-y divide-[#1E293B]">
+                {loading ? <p className="py-4 text-sm text-[#94A3B8]">Loading transactions...</p> : stats.recentTransactions.length > 0 ? stats.recentTransactions.map((item) => (
+                  <div key={item._id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                    <div className="min-w-0"><p className="truncate text-sm font-medium">{item.description || item.category}</p><p className="mt-1 text-xs text-[#64748B]">{item.category} · {new Date(item.date).toLocaleDateString("en-IN")}</p></div>
+                    <p className={`shrink-0 text-sm font-semibold ${item.type === "Income" ? "text-[#34D399]" : "text-rose-400"}`}>{item.type === "Income" ? "+" : "-"}{formatCurrency(item.amount)}</p>
                   </div>
+                )) : <div className="py-4"><p className="text-sm text-[#94A3B8]">No transactions yet.</p><Link href="/transactions" className="mt-2 inline-flex text-sm font-semibold text-[#10B981] hover:text-[#34D399]">Add your first transaction</Link></div>}
+              </div>
+            </section>
 
-                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#1F2937]">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-[#10B981] to-[#34D399] transition-all"
-                      style={{ width: `${closestGoal.progress}%` }}
-                    />
-                  </div>
-
-                  <p className="mt-3 text-sm text-[#94A3B8]">
-                    {formatCurrency(
-                      Math.max(
-                        closestGoal.targetAmount -
-                        closestGoal.currentAmount,
-                        0
-                      )
-                    )}{" "}
-                    remaining
-                  </p>
-                </div>
-              ) : (
-                <p className="mt-5 text-sm text-[#94A3B8]">
-                  Create a goal to start tracking your progress.
-                </p>
-              )}
-
-              {goals.some((goal) => goal.completed) && (
-                <div className="mt-4 rounded-xl border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-2 text-sm text-[#D4F2D3]">
-                  🎉 You have completed at least one goal.
-                </div>
-              )}
+            <section aria-labelledby="portfolio-heading" className="rounded-xl border border-[#1E293B] bg-[#0F172A] p-4">
+              <div className="flex items-center justify-between gap-3"><div><h2 id="portfolio-heading" className="font-semibold">Portfolio snapshot</h2><p className="mt-1 text-xs text-[#64748B]">{investments.length} tracked asset{investments.length === 1 ? "" : "s"}</p></div><Link href="/investments" className="text-sm font-semibold text-[#10B981] hover:text-[#34D399] focus:outline-none focus:ring-2 focus:ring-[#10B981]">View portfolio</Link></div>
+              {investments.length > 0 ? <div className="mt-5"><p className="text-xs text-[#64748B]">Current value</p><p className="mt-1 text-2xl font-semibold">{formatCurrency(investmentTotals.current)}</p><div className="mt-4 flex items-center justify-between border-t border-[#1E293B] pt-3 text-sm"><span className="text-[#94A3B8]">Profit / loss</span><span className={investmentTotals.profitLoss >= 0 ? "font-semibold text-[#34D399]" : "font-semibold text-rose-400"}>{investmentTotals.profitLoss >= 0 ? "+" : ""}{formatCurrency(investmentTotals.profitLoss)}</span></div></div> : <div className="mt-5"><p className="text-sm text-[#94A3B8]">No investments added yet.</p><Link href="/investments" className="mt-2 inline-flex text-sm font-semibold text-[#10B981] hover:text-[#34D399]">Add your first investment</Link></div>}
             </section>
           </div>
-
-          <section className="mt-6 rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6 shadow-[0_0_30px_rgba(16,185,129,0.06)]">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-xl font-semibold text-white">
-                    Investments
-                  </h2>
-
-                  <span className="rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-2.5 py-1 text-xs font-semibold text-[#10B981]">
-                    {investments.length}{" "}
-                    {investments.length === 1
-                      ? "asset"
-                      : "assets"}
-                  </span>
-                </div>
-
-                <p className="mt-1 text-sm text-[#94A3B8]">
-                  Your portfolio performance at a glance
-                </p>
-              </div>
-
-              <Link
-                href="/investments"
-                className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
-              >
-                Manage portfolio
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            {investments.length > 0 ? (
-              <>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
-                    <p className="text-sm text-[#94A3B8]">
-                      Total invested
-                    </p>
-
-                    <p className="mt-2 text-xl font-semibold text-white">
-                      {formatCurrency(investmentTotals.invested)}
-                    </p>
-
-                    <p className="mt-1 text-xs text-[#64748B]">
-                      Across {investments.length}{" "}
-                      {investments.length === 1 ? "asset" : "assets"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
-                    <p className="text-sm text-[#94A3B8]">
-                      Current value
-                    </p>
-
-                    <p className="mt-2 text-xl font-semibold text-white">
-                      {formatCurrency(investmentTotals.current)}
-                    </p>
-
-                    <p className="mt-1 text-xs text-[#64748B]">
-                      Latest recorded valuation
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
-                    <p className="text-sm text-[#94A3B8]">
-                      Total profit/loss
-                    </p>
-
-                    <p
-                      className={`mt-2 text-xl font-semibold ${investmentTotals.profitLoss >= 0
-                        ? "text-[#10B981]"
-                        : "text-rose-400"
-                        }`}
-                    >
-                      {investmentTotals.profitLoss >= 0
-                        ? "+"
-                        : ""}
-                      {formatCurrency(
-                        investmentTotals.profitLoss
-                      )}
-                    </p>
-
-                    <p
-                      className={`mt-1 text-xs ${portfolioReturnPercentage >= 0
-                        ? "text-[#10B981]"
-                        : "text-rose-400"
-                        }`}
-                    >
-                      {portfolioReturnPercentage >= 0
-                        ? "+"
-                        : ""}
-                      {portfolioReturnPercentage.toFixed(2)}%
-                      overall return
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
-                    <p className="text-sm text-[#94A3B8]">
-                      Asset mix
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {topInvestmentTypes.map(([type, count]) => (
-                        <span
-                          key={type}
-                          className="rounded-full border border-[#334155] bg-[#0F172A] px-2 py-1 text-xs text-[#CBD5E1]"
-                        >
-                          {type}: {count}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      Portfolio status
-                    </p>
-
-                    <p className="mt-1 text-sm text-[#94A3B8]">
-                      {investmentTotals.profitLoss >= 0
-                        ? "Your portfolio is currently above its invested value."
-                        : "Your portfolio is currently below its invested value."}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${investmentTotals.profitLoss >= 0
-                      ? "bg-[#10B981]/10 text-[#10B981]"
-                      : "bg-rose-500/10 text-rose-400"
-                      }`}
-                  >
-                    {investmentTotals.profitLoss >= 0
-                      ? "Positive return"
-                      : "Negative return"}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="mt-5 rounded-2xl border border-dashed border-[#334155] bg-[#111827]/50 p-6 text-center">
-                <p className="font-semibold text-white">
-                  Your portfolio is empty
-                </p>
-
-                <p className="mt-2 text-sm text-[#94A3B8]">
-                  Add your first investment to start tracking value and returns.
-                </p>
-
-                <Link
-                  href="/investments"
-                  className="mt-4 inline-flex rounded-xl bg-[#10B981] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#34D399]"
-                >
-                  Add investment
-                </Link>
-              </div>
-            )}
-          </section>
-
-          <section className="mt-6 rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Latest Investments
-                </h2>
-
-                <p className="mt-1 text-sm text-[#94A3B8]">
-                  Your three most recently added investments
-                </p>
-              </div>
-
-              <Link
-                href="/investments"
-                className="text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
-              >
-                View all
-              </Link>
-            </div>
-
-            {latestInvestments.length > 0 ? (
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                {latestInvestments.map((investment) => (
-                  <div
-                    key={investment._id}
-                    className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="truncate font-semibold text-white">
-                          {investment.name}
-                        </h3>
-
-                        <p className="mt-1 text-xs text-[#94A3B8]">
-                          {investment.symbol ||
-                            investment.schemeCode ||
-                            investment.goldPurity ||
-                            "Manual investment"}
-                        </p>
-                      </div>
-
-                      <span className="shrink-0 rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-2 py-1 text-xs font-medium text-[#10B981]">
-                        {investment.type}
-                      </span>
-                    </div>
-
-                    <div className="mt-4">
-                      <p className="text-xs text-[#64748B]">
-                        Current value
-                      </p>
-
-                      <p className="mt-1 text-xl font-semibold text-white">
-                        {formatCurrency(investment.currentValue)}
-                      </p>
-
-                      <p
-                        className={`mt-1 text-sm font-semibold ${investment.profitLoss >= 0
-                          ? "text-[#10B981]"
-                          : "text-rose-400"
-                          }`}
-                      >
-                        {investment.profitLoss >= 0 ? "+" : ""}
-                        {formatCurrency(investment.profitLoss)}
-                      </p>
-
-                      <p className="mt-1 text-xs text-[#94A3B8]">
-                        Invested: {formatCurrency(investment.totalInvested)}
-                      </p>
-
-                    </div>
-
-                    <div className="mt-3 border-t border-[#1F2937] pt-3">
-                      <p className="mt-1 text-xs text-[#64748B]">
-                        {formatInvestmentDate(investment)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-[#1F2937] bg-[#111827]/70 p-4">
-                <p className="text-sm text-[#94A3B8]">
-                  No investments added yet.
-                </p>
-
-                <Link
-                  href="/investments"
-                  className="mt-3 inline-flex text-sm font-semibold text-[#10B981] hover:text-[#34D399]"
-                >
-                  Add your first investment
-                </Link>
-              </div>
-            )}
-          </section>
-
-          <section className="mt-6 rounded-[24px] border border-[#334155] bg-[#0F172A]/90 p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-semibold text-white">Recent Transactions</h2>
-                <p className="mt-1 text-sm text-[#94A3B8]">Your latest 5 entries</p>
-              </div>
-              <Link href="/transactions" className="inline-flex items-center gap-2 text-sm font-semibold text-[#10B981] hover:text-[#34d399]">
-                View All
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {loading ? (
-                <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 px-4 py-4 text-sm text-[#94A3B8]">
-                  Loading transactions...
-                </div>
-              ) : stats.recentTransactions.length > 0 ? (
-                stats.recentTransactions.map((item) => (
-                  <div key={item._id} className="flex flex-col gap-3 rounded-2xl border border-[#1F2937] bg-[#111827]/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-semibold text-white">{item.description || item.category}</p>
-                      <p className="mt-1 text-sm text-[#94A3B8]">{new Date(item.date).toLocaleDateString()} • {item.category} • {item.type}</p>
-                    </div>
-                    <div className={`text-sm font-semibold ${item.type === "Income" ? "text-[#10B981]" : "text-rose-400"}`}>
-                      {item.type === "Income" ? "+" : "-"}{formatCurrency(item.amount)}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-[#1F2937] bg-[#111827]/70 px-4 py-4 text-sm text-[#94A3B8]">
-                  No transactions yet. Add your first transaction to see the dashboard update.
-                </div>
-              )}
-            </div>
-          </section>
         </div>
-
         <AppFooter />
       </main>
     </>
+  )
+}
+
+function HealthCard({ label, value, status, progress, href, link, warning }: { label: string; value: string; status: string; progress: number; href: string; link: string; warning: boolean }) {
+  const safeProgress = Math.min(Math.max(progress, 0), 100)
+  return (
+    <div className="rounded-xl border border-[#1E293B] bg-[#0F172A] p-4">
+      <div className="flex items-start justify-between gap-3"><div><p className="text-sm text-[#94A3B8]">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></div><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${warning ? "bg-amber-400/10 text-amber-300" : "bg-[#10B981]/10 text-[#34D399]"}`}>{status}</span></div>
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#1E293B]" role="progressbar" aria-label={`${label} progress`} aria-valuenow={safeProgress} aria-valuemin={0} aria-valuemax={100}><div className={`h-full rounded-full ${warning ? "bg-amber-400" : "bg-[#10B981]"}`} style={{ width: `${safeProgress}%` }} /></div>
+      <Link href={href} className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#10B981] hover:text-[#34D399] focus:outline-none focus:ring-2 focus:ring-[#10B981]">{link}<ArrowRight className="h-3.5 w-3.5" /></Link>
+    </div>
   )
 }
