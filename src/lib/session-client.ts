@@ -7,24 +7,29 @@ export type SessionResponse =
 let pendingSessionRequest: Promise<SessionResponse> | null = null;
 
 export async function getSessionClient(): Promise<SessionResponse> {
-  if (!pendingSessionRequest) {
-    pendingSessionRequest = fetch("/api/session", {
-      method: "GET",
-      credentials: "include",
+  if (pendingSessionRequest) {
+    return pendingSessionRequest;
+  }
+
+  const request = fetch("/api/session", {
+    method: "GET",
+    credentials: "include",
+  })
+    .then(async (res) => {
+      const data = (await res.json()) as SessionResponse;
+      return data;
     })
-      .then(async (res) => {
-        const data = (await res.json()) as SessionResponse;
-        return data;
-      })
-      .catch(() => ({
+    .catch(
+      (): SessionResponse => ({
         success: false,
         session: null,
         message: "Network error",
-      }))
-      .finally(() => {
-        pendingSessionRequest = null;
-      });
-  }
+      })
+    );
 
-  return pendingSessionRequest;
+  pendingSessionRequest = request.finally(() => {
+    pendingSessionRequest = null;
+  });
+
+  return request;
 }
