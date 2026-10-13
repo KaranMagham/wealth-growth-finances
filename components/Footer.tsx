@@ -60,7 +60,7 @@ const Footer = () => {
             </p>
             <div className="mt-6 space-y-3 text-sm text-[#CBD5E1]">
               {[
-                { label: 'Documentation', href: '/documentation' },
+                { label: 'Analysis & reports', href: '/analysis' },
                 { label: 'Privacy', href: '/privacy' },
                 { label: 'Terms', href: '/terms' },
               ].map((link) => (

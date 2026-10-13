@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X, ChevronDown, Plus, User, LogOut, Settings, Bell } from "lucide-react";
 import { useSession } from "@/hooks/useSession";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -20,6 +20,24 @@ const Navbar = () => {
   const user = session?.user;
   const isAuthenticated = status === "authenticated" && !!user;
   const isLoading = status === "loading";
+
+  useEffect(() => {
+    if (!isMenuOpen && !isMoreOpen && !isProfileOpen) return;
+
+    function closeMenus(event: KeyboardEvent | MouseEvent) {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      setIsMenuOpen(false);
+      setIsMoreOpen(false);
+      setIsProfileOpen(false);
+    }
+
+    document.addEventListener("keydown", closeMenus);
+    document.addEventListener("click", closeMenus);
+    return () => {
+      document.removeEventListener("keydown", closeMenus);
+      document.removeEventListener("click", closeMenus);
+    };
+  }, [isMenuOpen, isMoreOpen, isProfileOpen]);
 
   const handleLogout = async () => {
     try {
@@ -115,9 +133,13 @@ const Navbar = () => {
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setIsProfileOpen((open) => !open)}
                   className="inline-flex items-center gap-2 rounded-full border border-[#10B981]/30 bg-[#10B981]/10 px-3 py-2 text-sm text-[#D4F2D3] transition hover:border-[#10B981] hover:text-white"
                   aria-expanded={isProfileOpen}
+                  aria-controls="profile-menu"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsProfileOpen((open) => !open);
+                  }}
                 >
                   <User className="h-4 w-4" />
                   <span className="hidden sm:inline">
@@ -131,7 +153,7 @@ const Navbar = () => {
                 </button>
 
                 {isProfileOpen && (
-                  <div className="absolute right-0 top-12 z-50 w-56 rounded-2xl border border-[#334155] bg-[#0F172A] p-2 shadow-2xl">
+                  <div id="profile-menu" role="menu" className="absolute right-0 top-12 z-50 w-56 rounded-2xl border border-[#334155] bg-[#0F172A] p-2 shadow-2xl" onClick={(event) => event.stopPropagation()}>
                     <div className="border-b border-[#1F2937] pb-2">
                       <p className="truncate text-sm font-semibold text-white">
                         {user?.name || "User"}
@@ -185,9 +207,13 @@ const Navbar = () => {
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setIsMoreOpen((open) => !open)}
                   className="inline-flex items-center gap-1 rounded-full border border-[#10B981]/30 px-4 py-2 text-[#D4F2D3] transition hover:border-[#10B981] hover:text-white"
                   aria-expanded={isMoreOpen}
+                  aria-controls="more-menu"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsMoreOpen((open) => !open);
+                  }}
                 >
                   More
                   <ChevronDown
@@ -198,7 +224,7 @@ const Navbar = () => {
                 </button>
 
                 {isMoreOpen && (
-                  <div className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-[#334155] bg-[#0F172A] p-2 shadow-2xl">
+                  <div id="more-menu" role="menu" className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-[#334155] bg-[#0F172A] p-2 shadow-2xl" onClick={(event) => event.stopPropagation()}>
                     {[
                       { href: "/transactions", label: "Transactions" },
                       { href: "/budgets", label: "Budgets" },

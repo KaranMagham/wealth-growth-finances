@@ -6,7 +6,7 @@ const navigationLinks = [
   { label: "Assets", href: "/investments" },
   { label: "Budgets", href: "/budgets" },
   { label: "Goals", href: "/goals" },
-  { label: "Reports", href: "/reports" },
+  { label: "Analysis & reports", href: "/analysis" },
 ];
 
 const utilityLinks = [

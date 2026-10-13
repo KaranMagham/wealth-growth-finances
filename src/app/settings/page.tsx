@@ -13,7 +13,6 @@ import {
   Bot,
   LogOut,
   Smartphone,
-  Key,
   Mail,
   Monitor,
   Database,
@@ -33,6 +32,21 @@ type SessionUser = {
 };
 
 type ToggleState = Record<string, boolean>;
+
+const SETTINGS_STORAGE_KEY = "wealth-growth-settings";
+
+type StoredSettings = {
+  notificationToggles: ToggleState;
+  channelToggles: ToggleState;
+  securityToggles: ToggleState;
+  currency: string;
+  numberFormat: string;
+  analysisPeriod: string;
+  dateFormat: string;
+  showDecimals: boolean;
+  aiToggles: ToggleState;
+  aiStyle: "Concise" | "Balanced" | "Detailed";
+};
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -86,6 +100,20 @@ export default function SettingsPage() {
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
+  function applySettings(settings: Partial<StoredSettings>) {
+    if (settings.notificationToggles) setNotificationToggles(settings.notificationToggles);
+    if (settings.channelToggles) setChannelToggles(settings.channelToggles);
+    if (settings.securityToggles) setSecurityToggles(settings.securityToggles);
+    if (settings.currency) setCurrency(settings.currency);
+    if (settings.numberFormat) setNumberFormat(settings.numberFormat);
+    if (settings.analysisPeriod) setAnalysisPeriod(settings.analysisPeriod);
+    if (settings.dateFormat) setDateFormat(settings.dateFormat);
+    if (typeof settings.showDecimals === "boolean") setShowDecimals(settings.showDecimals);
+    if (settings.aiToggles) setAiToggles(settings.aiToggles);
+    if (settings.aiStyle) setAiStyle(settings.aiStyle);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +128,43 @@ export default function SettingsPage() {
       }
 
       setUser(result.session.user as SessionUser);
+      const stored = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (stored) {
+        try {
+          applySettings(JSON.parse(stored) as Partial<StoredSettings>);
+        } catch {
+          window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+        }
+      }
+
+      try {
+        const response = await fetch("/api/settings", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = (await response.json()) as {
+          success: boolean;
+          settings?: StoredSettings | null;
+          message?: string;
+        };
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "Unable to load settings");
+        }
+
+        if (data.settings) {
+          applySettings(data.settings);
+          window.localStorage.setItem(
+            SETTINGS_STORAGE_KEY,
+            JSON.stringify(data.settings)
+          );
+        }
+      } catch (error) {
+        setSettingsError(
+          error instanceof Error ? error.message : "Unable to load settings"
+        );
+      }
+
       setLoading(false);
     }
 
@@ -133,14 +198,46 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     setSaved(false);
+    setSettingsError(null);
 
-    // TODO: send full settings object to /api/settings later
-    // await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ... }) });
+    const settings: StoredSettings = {
+      notificationToggles,
+      channelToggles,
+      securityToggles,
+      currency,
+      numberFormat,
+      analysisPeriod,
+      dateFormat,
+      showDecimals,
+      aiToggles,
+      aiStyle,
+    };
 
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(settings),
+      });
+      const data = (await response.json()) as {
+        success: boolean;
+        message?: string;
+      };
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Unable to save settings");
+      }
+
+      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
       setSaved(true);
-    }, 600);
+    } catch (error) {
+      setSettingsError(
+        error instanceof Error ? error.message : "Unable to save settings"
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function updateNotification(key: string, value: boolean) {
@@ -500,7 +597,12 @@ export default function SettingsPage() {
 
               {saved && (
                 <span className="text-sm text-[#6EE7B7]">
-                  Settings saved (demo only)
+                  Settings saved to your account
+                </span>
+              )}
+              {settingsError && (
+                <span role="alert" className="text-sm text-rose-300">
+                  {settingsError}
                 </span>
               )}
             </div>

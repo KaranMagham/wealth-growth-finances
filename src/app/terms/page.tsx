@@ -71,7 +71,7 @@ export default function TermsPage() {
               <Link href="/privacy" className="rounded-full border border-[#10B981]/60 bg-[#0F172A]/70 px-6 py-3 text-sm font-semibold text-[#E2E8F0] transition hover:border-[#10B981] hover:bg-[#0F172A] hover:text-[#10B981]">
                 View Privacy Policy
               </Link>
-              <Link href="/contact " className="rounded-full bg-[#10B981] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#059669]">
+              <Link href="/contact" className="rounded-full bg-[#10B981] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#059669]">
                 Contact Us
               </Link>
             </div>

@@ -10,7 +10,7 @@ const navigation = [
   { name: "Goals", href: "/goals" },
   { name: "Investments", href: "/investments" },
   { name: "Analysis", href: "/analysis" },
-  { name: "AI Insights", href: "/ai-insights" },
+  { name: "AI Insights", href: "/analysis" },
   { name: "Notifications", href: "/notifications" },
   { name: "Profile", href: "/profile" },
 ];

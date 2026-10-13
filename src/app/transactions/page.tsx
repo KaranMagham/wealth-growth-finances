@@ -79,6 +79,12 @@ export default function TransactionsPage() {
 
         if (status === "authenticated") {
             const timer = window.setTimeout(() => {
+                if (new URLSearchParams(window.location.search).get("add") === "true") {
+                    document.getElementById("transaction-form")?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                    });
+                }
                 void fetchTransactions();
             }, 0);
 
@@ -200,7 +206,7 @@ export default function TransactionsPage() {
                         </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="mb-6 rounded-[28px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)] sm:p-6">
+                    <form id="transaction-form" onSubmit={handleSubmit} className="mb-6 rounded-[28px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)] sm:p-6">
                         <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-[#94A3B8]">
                             <Plus className="h-4 w-4 text-[#10B981]" />
                             {editingId ? "Edit Transaction" : "Add Transaction"}

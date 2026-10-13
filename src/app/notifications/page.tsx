@@ -12,6 +12,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useSession } from "@/hooks/useSession";
+import { useRouter } from "next/navigation";
 
 type Notification = {
   _id: string;
@@ -118,11 +119,18 @@ function getDayBucket(dateStr: string) {
 
 export default function NotificationsPage() {
   const { status, session } = useSession();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterKey>("all");
 
   const userId = session?.user?.id;
+
+  useEffect(() => {
+    if (status === "unauthenticated" || status === "error") {
+      if (status === "unauthenticated") router.replace("/login");
+    }
+  }, [router, status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,7 +214,7 @@ export default function NotificationsPage() {
       .map((key) => ({ label: key, items: buckets[key] }));
   }, [filtered]);
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || (status === "authenticated" && loading)) {
     return (
       <main className="min-h-screen bg-[#0F172A] px-4 py-12 text-[#F8FAFC]">
         <div className="mx-auto max-w-4xl animate-pulse">

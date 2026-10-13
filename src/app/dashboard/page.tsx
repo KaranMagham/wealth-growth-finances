@@ -97,8 +97,15 @@ export default function DashboardPage() {
   }, [status, router, loadDashboardData])
 
   const stats = useMemo(() => {
-    const income = transactions.reduce((sum, item) => sum + (item.type === "Income" ? item.amount : 0), 0)
-    const expense = transactions.reduce((sum, item) => sum + (item.type === "Expense" ? item.amount : 0), 0)
+    const now = new Date()
+    const currentMonth = transactions.filter((item) => {
+      const date = new Date(item.date)
+      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+    })
+    const overallIncome = transactions.reduce((sum, item) => sum + (item.type === "Income" ? item.amount : 0), 0)
+    const overallExpense = transactions.reduce((sum, item) => sum + (item.type === "Expense" ? item.amount : 0), 0)
+    const income = currentMonth.reduce((sum, item) => sum + (item.type === "Income" ? item.amount : 0), 0)
+    const expense = currentMonth.reduce((sum, item) => sum + (item.type === "Expense" ? item.amount : 0), 0)
     const balance = income - expense
     const savings = Math.max(balance, 0)
     const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0
@@ -111,7 +118,17 @@ export default function DashboardPage() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 3)
 
-    return { income, expense, balance, savings, savingsRate, healthScore, healthLabel, recentTransactions }
+    return {
+      income,
+      expense,
+      balance,
+      overallBalance: overallIncome - overallExpense,
+      savings,
+      savingsRate,
+      healthScore,
+      healthLabel,
+      recentTransactions,
+    }
   }, [transactions])
 
   const investmentTotals = useMemo(
@@ -126,15 +143,17 @@ export default function DashboardPage() {
     [investments],
   )
 
-  const totalNetWorth = stats.balance + investmentTotals.current
+  const totalNetWorth = stats.overallBalance + investmentTotals.current
   const allocatedGoalAmount = goals.reduce((sum, goal) => sum + goal.currentAmount, 0)
-  const availableCash = Math.max(totalNetWorth - allocatedGoalAmount, 0)
+  const availableCash = totalNetWorth - allocatedGoalAmount
   const totalBudget = budgets.reduce((sum, budget) => sum + budget.limit, 0)
   const totalBudgetSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0)
-  const budgetUsage = totalBudget > 0 ? Math.min(Math.round((totalBudgetSpent / totalBudget) * 100), 100) : 0
+  const budgetUsage = totalBudget > 0 ? Math.round((totalBudgetSpent / totalBudget) * 100) : 0
   const activeGoals = goals.filter((goal) => !goal.completed)
-  const goalProgress = activeGoals.length > 0
-    ? Math.round(activeGoals.reduce((sum, goal) => sum + (goal.targetAmount > 0 ? Math.min(goal.currentAmount / goal.targetAmount * 100, 100) : 0), 0) / activeGoals.length)
+  const goalTargetTotal = activeGoals.reduce((sum, goal) => sum + Math.max(goal.targetAmount, 0), 0)
+  const goalCurrentTotal = activeGoals.reduce((sum, goal) => sum + Math.max(goal.currentAmount, 0), 0)
+  const goalProgress = goalTargetTotal > 0
+    ? Math.round(Math.min(goalCurrentTotal / goalTargetTotal * 100, 100))
     : 0
 
   async function handleRefreshPrices() {
@@ -284,7 +303,7 @@ function HealthCard({ label, value, status, progress, href, link, warning }: { l
   return (
     <div className="rounded-xl border border-[#1E293B] bg-[#0F172A] p-4">
       <div className="flex items-start justify-between gap-3"><div><p className="text-sm text-[#94A3B8]">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p></div><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${warning ? "bg-amber-400/10 text-amber-300" : "bg-[#10B981]/10 text-[#34D399]"}`}>{status}</span></div>
-      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#1E293B]" role="progressbar" aria-label={`${label} progress`} aria-valuenow={safeProgress} aria-valuemin={0} aria-valuemax={100}><div className={`h-full rounded-full ${warning ? "bg-amber-400" : "bg-[#10B981]"}`} style={{ width: `${safeProgress}%` }} /></div>
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#1E293B]" role="progressbar" aria-label={`${label} progress`} aria-valuenow={safeProgress} aria-valuemin={0} aria-valuemax={100}><div className={`h-full rounded-full ${warning ? "bg-amber-400" : "bg-[#10B981]"}`} style={{ width: `${Math.min(safeProgress, 100)}%` }} /></div>
       <Link href={href} className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#10B981] hover:text-[#34D399] focus:outline-none focus:ring-2 focus:ring-[#10B981]">{link}<ArrowRight className="h-3.5 w-3.5" /></Link>
     </div>
   )

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
 import {
     ArrowLeft,
@@ -72,12 +73,19 @@ const categories: {
 
 export default function NotificationPreferencesPage() {
     const { status, session } = useSession();
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [preferences, setPreferences] = useState<Preferences | null>(null);
 
     const userId = session?.user?.id;
+
+    useEffect(() => {
+        if (status === "unauthenticated" || status === "error") {
+            if (status === "unauthenticated") router.replace("/login");
+        }
+    }, [router, status]);
 
     useEffect(() => {
         let cancelled = false;
@@ -142,7 +150,7 @@ export default function NotificationPreferencesPage() {
         });
     }
 
-    if (status === "loading" || loading) {
+    if (status === "loading" || (status === "authenticated" && loading)) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-[#0F172A]">
                 <div className="flex items-center gap-3 text-[#F8FAFC]">
