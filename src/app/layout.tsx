@@ -54,6 +54,10 @@ export const metadata: Metadata = {
   creator: "Wealth Growth",
   publisher: "Wealth Growth",
 
+  verification: {
+    google: "NDaiMVu0ATO2kUcDkMzMWmgfsCgs8feYGA0FbDiBh-w",
+  },
+
   formatDetection: {
     telephone: false,
     address: false,
