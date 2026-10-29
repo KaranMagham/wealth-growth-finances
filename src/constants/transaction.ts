@@ -1,5 +1,16 @@
 export const TRANSACTION_TYPES = ["Income", "Expense"] as const;
 
+export const PAYMENT_METHODS = [
+  "Cash",
+  "Online",
+  "UPI",
+  "Credit Card",
+  "Debit Card",
+  "Bank Transfer",
+  "Cheque",
+  "Other",
+] as const;
+
 export const INCOME_CATEGORIES = [
   "Business",
   "Extra Income",

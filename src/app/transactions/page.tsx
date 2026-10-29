@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
 import { useSession } from "@/hooks/useSession";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, TRANSACTION_TYPES } from "@/constants/transaction";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS, TRANSACTION_TYPES } from "@/constants/transaction";
 import AppFooter from "../../components/AppFooter";
 
 interface TransactionRecord {
@@ -30,17 +30,6 @@ const initialForm = {
     date: new Date().toISOString().slice(0, 10),
 };
 
-const PAYMENT_METHODS = [
-    "Cash",
-    "Online",
-    "UPI",
-    "Credit Card",
-    "Debit Card",
-    "Bank Transfer",
-    "Cheque",
-    "Other",
-] as const;
-
 export default function TransactionsPage() {
     const { status } = useSession();
     const router = useRouter();
@@ -52,6 +41,7 @@ export default function TransactionsPage() {
     const [search, setSearch] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
+    const [isScanning, setIsScanning] = useState(false);
 
     const fetchTransactions = useCallback(async () => {
         try {
@@ -138,6 +128,51 @@ export default function TransactionsPage() {
         } catch (error) {
             console.error(error);
             setMessage("Something went wrong");
+        }
+    };
+
+    const handleReceiptScan = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file) return;
+
+        setIsScanning(true);
+        setMessage(null);
+
+        try {
+            const body = new FormData();
+            body.append("receipt", file);
+            const scanResponse = await fetch("/api/transactions/scan", {
+                method: "POST",
+                body,
+            });
+            const scanData = await scanResponse.json();
+
+            if (!scanResponse.ok || !scanData.success) {
+                setMessage(scanData.message || "Unable to scan receipt");
+                return;
+            }
+
+            const createResponse = await fetch("/api/transactions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(scanData.transaction),
+            });
+            const createData = await createResponse.json();
+
+            if (!createResponse.ok || !createData.success) {
+                setMessage(createData.message || "Receipt scanned, but the transaction was not added");
+                return;
+            }
+
+            setMessage(`Receipt scanned and ${scanData.transaction.type.toLowerCase()} added`);
+            setHasLoaded(false);
+            await fetchTransactions();
+        } catch (error) {
+            console.error(error);
+            setMessage("Unable to scan receipt");
+        } finally {
+            setIsScanning(false);
         }
     };
 
@@ -277,6 +312,28 @@ export default function TransactionsPage() {
                         </div>
                         {message ? <p className="mt-3 text-sm text-[#D4F2D3]">{message}</p> : null}
                     </form>
+
+                    <section className="mb-6 flex flex-col gap-4 rounded-[28px] border border-dashed border-[#10B981]/50 bg-[#0F172A]/70 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                        <div>
+                            <h2 className="flex items-center gap-2 text-lg font-semibold">
+                                <Camera className="h-5 w-5 text-[#10B981]" />
+                                Scan a receipt
+                            </h2>
+                            <p className="mt-1 text-sm text-[#94A3B8]">
+                                Upload a clear receipt or income proof. We&apos;ll read it and add the transaction automatically.
+                            </p>
+                        </div>
+                        <label className={`inline-flex cursor-pointer items-center justify-center rounded-full px-4 py-2 font-semibold text-white ${isScanning ? "cursor-wait bg-[#475569]" : "bg-[#10B981] hover:bg-[#059669]"}`}>
+                            {isScanning ? "Scanning..." : "Upload & scan"}
+                            <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                                onChange={handleReceiptScan}
+                                disabled={isScanning}
+                                className="sr-only"
+                            />
+                        </label>
+                    </section>
 
                     <section className="rounded-[28px] border border-[#334155] bg-[#0F172A]/90 p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)] sm:p-6">
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
